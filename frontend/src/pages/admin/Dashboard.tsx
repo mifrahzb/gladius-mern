@@ -6,37 +6,52 @@ import {
   Package, 
   ShoppingCart, 
   Users, 
-  Settings,
   LogOut,
   Box
 } from 'lucide-react';
 import { useEffect } from 'react';
+import { useAuth } from '@/hooks/useAuth';
 import gladiusLogo from '@/assets/gladius-logo.png';
-
-/**
- * SECURITY WARNING - DEMO ONLY:
- * This dashboard uses localStorage authentication for demo purposes only.
- * For production, implement proper backend authentication with:
- * - Server-side session management
- * - Secure JWT or OAuth tokens
- * - Database-backed user roles (separate roles table)
- * - Row-Level Security (RLS) policies
- * - Protected API endpoints
- */
 
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { user, logout, isAuthenticated, isAdmin, loading } = useAuth();
 
   useEffect(() => {
-    const isLoggedIn = localStorage.getItem('admin_logged_in');
-    if (!isLoggedIn) {
+    if (!loading && !isAuthenticated) {
       navigate('/admin/login');
     }
-  }, [navigate]);
+  }, [isAuthenticated, loading, navigate]);
+
+  // Show loading state while checking auth
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <p className="text-muted-foreground">Loading...</p>
+      </div>
+    );
+  }
+
+  // Redirect if not authenticated
+  if (!isAuthenticated) {
+    return null;
+  }
+
+  // Check if user is admin
+  if (!isAdmin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <h1 className="text-2xl font-bold mb-2">Access Denied</h1>
+          <p className="text-muted-foreground">You need admin privileges to access this page.</p>
+        </div>
+      </div>
+    );
+  }
 
   const handleLogout = () => {
-    localStorage.removeItem('admin_logged_in');
+    logout();
     navigate('/admin/login');
   };
 
@@ -55,6 +70,9 @@ const AdminDashboard = () => {
         <div className="p-6 border-b">
           <img src={gladiusLogo} alt="Gladius" className="h-10 mb-2" />
           <p className="text-sm text-muted-foreground">Admin Dashboard</p>
+          <p className="text-xs text-muted-foreground mt-1">
+            Welcome, {user?.name}
+          </p>
         </div>
         
         <nav className="flex-1 p-4">
