@@ -3,6 +3,8 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { MapPin, Mail, Shield, Award, Heart } from 'lucide-react';
 import { useState } from 'react';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 import gladiusLogo from '@/assets/gladius-logo.png';
 import heroBackground from '@/assets/hero-background.jpg';
 
@@ -18,6 +20,7 @@ const About = () => {
 
   return (
     <div className="min-h-screen bg-background">
+      <Header />
       {/* Hero Section */}
       <section 
         className="py-24 relative overflow-hidden"
@@ -145,6 +148,7 @@ const About = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

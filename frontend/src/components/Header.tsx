@@ -1,15 +1,16 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Menu, ShoppingCart, Search, User, ChevronDown } from 'lucide-react';
+import { Menu, ShoppingCart, Search, User, ChevronDown, Home } from 'lucide-react';
 import gladiusLogo from '@/assets/gladius-logo.png';
 import { useCart } from '@/hooks/useCart';
 
 const Header = () => {
   const { cartCount } = useCart();
+  const navigate = useNavigate();
 
   const navItems = [
     { name: 'Home', href: '/' },
@@ -62,6 +63,14 @@ const Header = () => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent className="w-48 bg-background border border-border shadow-premium">
+                <DropdownMenuItem asChild>
+                  <Link
+                    to="/collections"
+                    className="w-full text-sm font-semibold text-foreground hover:text-brown transition-smooth cursor-pointer"
+                  >
+                    View All
+                  </Link>
+                </DropdownMenuItem>
                 {knifeCollections.map((collection) => (
                   <DropdownMenuItem key={collection.name} asChild>
                     <Link
@@ -77,17 +86,37 @@ const Header = () => {
           </nav>
 
           {/* Right side actions */}
-          <div className="flex items-center space-x-4">
-            <Button variant="ghost" size="icon" className="hidden sm:flex">
+          <div className="flex items-center space-x-2">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/')}
+              title="Home"
+            >
+              <Home className="h-4 w-4" />
+            </Button>
+
+            <Button 
+              variant="ghost" 
+              size="icon" 
+              className="hidden sm:flex"
+              onClick={() => navigate('/search')}
+              title="Search"
+            >
               <Search className="h-4 w-4" />
             </Button>
             
-            <Button variant="ghost" size="icon">
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/login')}
+              title="Login"
+            >
               <User className="h-4 w-4" />
             </Button>
 
             <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative">
+              <Button variant="ghost" size="icon" className="relative" title="Cart">
                 <ShoppingCart className="h-4 w-4" />
                 {cartCount > 0 && (
                   <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">

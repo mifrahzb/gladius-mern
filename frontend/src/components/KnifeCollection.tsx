@@ -2,10 +2,12 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Star } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import knifeCollection from '@/assets/knife-collection.jpg';
 import lovelessKnife from '@/assets/loveless-knife.jpg';
 
 const KnifeCollection = () => {
+  const navigate = useNavigate();
   const knifeTypes = [
     {
       name: 'Hunting Knives',
@@ -85,7 +87,11 @@ const KnifeCollection = () => {
                   ))}
                 </div>
 
-                <Button variant="steel" className="w-full group">
+                <Button 
+                  variant="steel" 
+                  className="w-full group"
+                  onClick={() => navigate('/collections')}
+                >
                   Explore Collection
                   <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
                 </Button>
@@ -118,7 +124,11 @@ const KnifeCollection = () => {
 
         {/* CTA Section */}
         <div className="text-center mt-16">
-          <Button variant="cta" size="xl">
+          <Button 
+            variant="cta" 
+            size="xl"
+            onClick={() => navigate('/collections')}
+          >
             View All Collections
             <ArrowRight className="ml-2 h-5 w-5" />
           </Button>

@@ -20,6 +20,8 @@ import Orders from "./pages/admin/Orders";
 import Inventory from "./pages/admin/Inventory";
 import Customers from "./pages/admin/Customers";
 import NotFound from "./pages/NotFound";
+import Search from "./pages/Search";
+import UserLogin from "./pages/UserLogin";
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -47,6 +49,8 @@ const App = () => (
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/contact" element={<Contact />} />
+              <Route path="/search" element={<Search />} />
+              <Route path="/login" element={<UserLogin />} />
               
               {/* Admin Routes */}
               <Route path="/admin/login" element={<AdminLogin />} />
