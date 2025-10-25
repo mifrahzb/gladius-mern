@@ -5,23 +5,40 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Shield } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { useAuth } from '@/hooks/useAuth';
 import gladiusLogo from '@/assets/gladius-logo.png';
+
+/**
+ * SECURITY WARNING - DEMO ONLY:
+ * This admin login uses localStorage for demo purposes only.
+ * For production, you MUST implement:
+ * 1. Server-side authentication with secure session management
+ * 2. JWT tokens or OAuth
+ * 3. User roles stored in a separate database table (NOT localStorage)
+ * 4. Row-Level Security (RLS) policies
+ * 5. HTTPS for all connections
+ * 
+ * Never rely on client-side storage for authentication in production!
+ */
 
 const AdminLogin = () => {
   const navigate = useNavigate();
-  const [credentials, setCredentials] = useState({ username: '', password: '' });
+  const { login } = useAuth();
+  const [credentials, setCredentials] = useState({ email: '', password: '' });
+  const [loading, setLoading] = useState(false);
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Mock authentication - In real app, this would verify against backend
-    if (credentials.username && credentials.password) {
-      localStorage.setItem('admin_logged_in', 'true');
-      toast({
-        title: "Login successful",
-        description: "Welcome to admin dashboard",
-      });
+    setLoading(true);
+    
+    try {
+      await login(credentials.email, credentials.password);
       navigate('/admin/dashboard');
+    } catch (error) {
+      // Error is already shown by useAuth hook
+      console.error('Login failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -41,11 +58,13 @@ const AdminLogin = () => {
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
             <div>
-              <Label htmlFor="username">Username</Label>
+              <Label htmlFor="email">Email</Label>
               <Input
-                id="username"
-                value={credentials.username}
-                onChange={(e) => setCredentials({...credentials, username: e.target.value})}
+                id="email"
+                type="email"
+                placeholder="admin@gladius.com"
+                value={credentials.email}
+                onChange={(e) => setCredentials({...credentials, email: e.target.value})}
                 required
               />
             </div>
@@ -59,8 +78,8 @@ const AdminLogin = () => {
                 required
               />
             </div>
-            <Button type="submit" className="w-full">
-              Login to Dashboard
+            <Button type="submit" className="w-full" disabled={loading}>
+              {loading ? 'Logging in...' : 'Login to Dashboard'}
             </Button>
           </form>
         </CardContent>

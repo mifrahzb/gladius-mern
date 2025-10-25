@@ -13,6 +13,17 @@ import {
 import { useEffect } from 'react';
 import gladiusLogo from '@/assets/gladius-logo.png';
 
+/**
+ * SECURITY WARNING - DEMO ONLY:
+ * This dashboard uses localStorage authentication for demo purposes only.
+ * For production, implement proper backend authentication with:
+ * - Server-side session management
+ * - Secure JWT or OAuth tokens
+ * - Database-backed user roles (separate roles table)
+ * - Row-Level Security (RLS) policies
+ * - Protected API endpoints
+ */
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
   const location = useLocation();

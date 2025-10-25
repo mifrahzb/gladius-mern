@@ -1,8 +1,11 @@
 import { Button } from '@/components/ui/button';
 import { ArrowRight, Shield, Award } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
 import heroBackground from '@/assets/hero-background.jpg';
 
 const Hero = () => {
+  const navigate = useNavigate();
+
   return (
     <section className="relative min-h-screen flex items-center justify-center overflow-hidden">
       {/* Background Image */}
@@ -36,13 +39,15 @@ const Hero = () => {
           </p>
 
           {/* CTA Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
-            <Button variant="cta" size="xl" className="group">
+          <div className="flex justify-center items-center mb-12">
+            <Button 
+              variant="cta" 
+              size="xl" 
+              className="group"
+              onClick={() => navigate('/collections')}
+            >
               Shop Collection
               <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-            </Button>
-            <Button variant="steel" size="xl">
-              Explore Craftsmanship
             </Button>
           </div>
 
