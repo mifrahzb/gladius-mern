@@ -9,41 +9,76 @@ import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useCart } from '@/hooks/useCart';
+import { ordersApi } from '@/lib/api';
 import { CreditCard, Truck, DollarSign } from 'lucide-react';
 import { toast } from '@/hooks/use-toast';
 
 const Checkout = () => {
   const navigate = useNavigate();
   const { items, cartTotal, clearCart } = useCart();
+  const [loading, setLoading] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState('stripe');
   const [shippingMethod, setShippingMethod] = useState('standard');
-  const [zipCode, setZipCode] = useState('');
-  const [shippingCost, setShippingCost] = useState(0);
+  
+  const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    zipCode: ''
+  });
 
-  const calculateShipping = () => {
-    // Mock shipping calculation
-    if (zipCode.length === 5) {
-      const cost = shippingMethod === 'express' ? 25 : 10;
-      setShippingCost(cost);
+  const shippingCost = shippingMethod === 'express' ? 25 : 10;
+  const tax = cartTotal * 0.08;
+  const total = cartTotal + shippingCost + tax;
+
+  const handlePlaceOrder = async () => {
+    setLoading(true);
+    try {
+      const orderData = {
+        items: items.map(item => ({
+          product: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        shippingAddress: {
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          address: formData.address,
+          city: formData.city,
+          state: formData.state,
+          zipCode: formData.zipCode,
+          phone: formData.phone
+        },
+        paymentMethod,
+        shippingMethod,
+        shippingCost,
+        tax,
+        totalAmount: total
+      };
+
+      await ordersApi.create(orderData);
+      
       toast({
-        title: "Shipping calculated",
-        description: `Shipping cost: $${cost}`,
+        title: "Order placed successfully!",
+        description: "You'll receive a confirmation email shortly.",
       });
+      
+      clearCart();
+      navigate('/');
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: error.response?.data?.message || 'Failed to place order',
+      });
+    } finally {
+      setLoading(false);
     }
   };
-
-  const handlePlaceOrder = () => {
-    // Mock order placement
-    toast({
-      title: "Order placed successfully!",
-      description: "You'll receive a confirmation email shortly.",
-    });
-    clearCart();
-    navigate('/');
-  };
-
-  const tax = cartTotal * 0.08; // 8% tax
-  const total = cartTotal + shippingCost + tax;
 
   return (
     <div className="min-h-screen bg-background flex flex-col">
@@ -52,9 +87,7 @@ const Checkout = () => {
         <h1 className="text-4xl font-bold mb-8">Checkout</h1>
         
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Checkout Form */}
           <div className="lg:col-span-2 space-y-6">
-            {/* Shipping Information */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -66,33 +99,59 @@ const Checkout = () => {
                 <div className="grid md:grid-cols-2 gap-4">
                   <div>
                     <Label>First Name</Label>
-                    <Input placeholder="John" />
+                    <Input 
+                      value={formData.firstName}
+                      onChange={(e) => setFormData({...formData, firstName: e.target.value})}
+                      required
+                    />
                   </div>
                   <div>
                     <Label>Last Name</Label>
-                    <Input placeholder="Doe" />
+                    <Input 
+                      value={formData.lastName}
+                      onChange={(e) => setFormData({...formData, lastName: e.target.value})}
+                      required
+                    />
                   </div>
                 </div>
                 <div>
                   <Label>Email</Label>
-                  <Input type="email" placeholder="john@example.com" />
+                  <Input 
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({...formData, email: e.target.value})}
+                    required
+                  />
                 </div>
                 <div>
                   <Label>Phone</Label>
-                  <Input type="tel" placeholder="+1 (555) 000-0000" />
+                  <Input 
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
+                    required
+                  />
                 </div>
                 <div>
                   <Label>Address</Label>
-                  <Input placeholder="123 Main St" />
+                  <Input 
+                    value={formData.address}
+                    onChange={(e) => setFormData({...formData, address: e.target.value})}
+                    required
+                  />
                 </div>
                 <div className="grid md:grid-cols-3 gap-4">
                   <div>
                     <Label>City</Label>
-                    <Input placeholder="Seattle" />
+                    <Input 
+                      value={formData.city}
+                      onChange={(e) => setFormData({...formData, city: e.target.value})}
+                      required
+                    />
                   </div>
                   <div>
                     <Label>State</Label>
-                    <Select>
+                    <Select value={formData.state} onValueChange={(value) => setFormData({...formData, state: value})}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select" />
                       </SelectTrigger>
@@ -106,17 +165,15 @@ const Checkout = () => {
                   <div>
                     <Label>ZIP Code</Label>
                     <Input 
-                      placeholder="98155" 
-                      value={zipCode}
-                      onChange={(e) => setZipCode(e.target.value)}
-                      onBlur={calculateShipping}
+                      value={formData.zipCode}
+                      onChange={(e) => setFormData({...formData, zipCode: e.target.value})}
+                      required
                     />
                   </div>
                 </div>
               </CardContent>
             </Card>
 
-            {/* Shipping Method */}
             <Card>
               <CardHeader>
                 <CardTitle>Shipping Method</CardTitle>
@@ -127,7 +184,6 @@ const Checkout = () => {
                     <RadioGroupItem value="standard" id="standard" />
                     <Label htmlFor="standard" className="flex-1 cursor-pointer">
                       <div className="font-semibold">Standard Shipping (5-7 days)</div>
-                      <div className="text-sm text-muted-foreground">USPS / FedEx Ground</div>
                     </Label>
                     <span className="font-semibold">$10.00</span>
                   </div>
@@ -135,7 +191,6 @@ const Checkout = () => {
                     <RadioGroupItem value="express" id="express" />
                     <Label htmlFor="express" className="flex-1 cursor-pointer">
                       <div className="font-semibold">Express Shipping (2-3 days)</div>
-                      <div className="text-sm text-muted-foreground">FedEx / UPS Express</div>
                     </Label>
                     <span className="font-semibold">$25.00</span>
                   </div>
@@ -143,7 +198,6 @@ const Checkout = () => {
               </CardContent>
             </Card>
 
-            {/* Payment Method */}
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
@@ -157,48 +211,19 @@ const Checkout = () => {
                     <RadioGroupItem value="stripe" id="stripe" />
                     <Label htmlFor="stripe" className="flex-1 cursor-pointer">
                       <div className="font-semibold">Credit / Debit Card</div>
-                      <div className="text-sm text-muted-foreground">Stripe (Visa, Mastercard, Amex)</div>
-                    </Label>
-                  </div>
-                  <div className="flex items-center space-x-2 border rounded-lg p-4 mb-3">
-                    <RadioGroupItem value="paypal" id="paypal" />
-                    <Label htmlFor="paypal" className="flex-1 cursor-pointer">
-                      <div className="font-semibold">PayPal</div>
-                      <div className="text-sm text-muted-foreground">Pay with your PayPal account</div>
                     </Label>
                   </div>
                   <div className="flex items-center space-x-2 border rounded-lg p-4">
                     <RadioGroupItem value="cod" id="cod" />
                     <Label htmlFor="cod" className="flex-1 cursor-pointer">
                       <div className="font-semibold">Cash on Delivery</div>
-                      <div className="text-sm text-muted-foreground">Pay when you receive</div>
                     </Label>
                   </div>
                 </RadioGroup>
-
-                {paymentMethod === 'stripe' && (
-                  <div className="mt-6 space-y-4">
-                    <div>
-                      <Label>Card Number</Label>
-                      <Input placeholder="4242 4242 4242 4242" />
-                    </div>
-                    <div className="grid grid-cols-2 gap-4">
-                      <div>
-                        <Label>Expiry Date</Label>
-                        <Input placeholder="MM/YY" />
-                      </div>
-                      <div>
-                        <Label>CVC</Label>
-                        <Input placeholder="123" />
-                      </div>
-                    </div>
-                  </div>
-                )}
               </CardContent>
             </Card>
           </div>
 
-          {/* Order Summary */}
           <div className="lg:col-span-1">
             <Card className="sticky top-4">
               <CardHeader>
@@ -239,9 +264,10 @@ const Checkout = () => {
                   className="w-full" 
                   size="lg"
                   onClick={handlePlaceOrder}
+                  disabled={loading}
                 >
                   <DollarSign className="w-4 h-4 mr-2" />
-                  Place Order
+                  {loading ? 'Processing...' : 'Place Order'}
                 </Button>
               </CardContent>
             </Card>
