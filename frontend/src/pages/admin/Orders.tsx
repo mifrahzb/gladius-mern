@@ -1,47 +1,46 @@
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Eye, Truck, Check } from 'lucide-react';
 
+import { toast } from '@/hooks/use-toast';
+
+interface Order {
+  id: string;
+  customer: string;
+  email: string;
+  products: number;
+  total: number;
+  status: string;
+  date: string;
+}
+
 const Orders = () => {
-  const orders = [
-    { 
-      id: 'ORD-001', 
-      customer: 'John Doe', 
-      email: 'john@example.com',
-      products: 2, 
-      total: 434, 
-      status: 'Processing',
-      date: '2024-01-15'
-    },
-    { 
-      id: 'ORD-002', 
-      customer: 'Jane Smith', 
-      email: 'jane@example.com',
-      products: 1, 
-      total: 389, 
-      status: 'Shipped',
-      date: '2024-01-14'
-    },
-    { 
-      id: 'ORD-003', 
-      customer: 'Bob Johnson', 
-      email: 'bob@example.com',
-      products: 3, 
-      total: 567, 
-      status: 'Delivered',
-      date: '2024-01-13'
-    },
-    { 
-      id: 'ORD-004', 
-      customer: 'Alice Brown', 
-      email: 'alice@example.com',
-      products: 1, 
-      total: 245, 
-      status: 'Processing',
-      date: '2024-01-15'
-    },
-  ];
+  const [orders, setOrders] = useState<Order[]>([]);
+
+  useEffect(() => {
+    loadOrders();
+  }, []);
+
+  const loadOrders = () => {
+    const savedOrders = localStorage.getItem('admin_orders');
+    if (savedOrders) {
+      setOrders(JSON.parse(savedOrders));
+    }
+  };
+
+  const updateOrderStatus = (orderId: string, newStatus: string) => {
+    const updatedOrders = orders.map(order =>
+      order.id === orderId ? { ...order, status: newStatus } : order
+    );
+    localStorage.setItem('admin_orders', JSON.stringify(updatedOrders));
+    setOrders(updatedOrders);
+    toast({
+      title: "Order updated",
+      description: `Order ${orderId} status changed to ${newStatus}`,
+    });
+  };
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any, className: string }> = {
@@ -75,7 +74,14 @@ const Orders = () => {
                 </tr>
               </thead>
               <tbody>
-                {orders.map((order) => {
+                {orders.length === 0 ? (
+                  <tr>
+                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
+                      No orders yet. Orders will appear here when customers make purchases.
+                    </td>
+                  </tr>
+                ) : (
+                  orders.map((order) => {
                   const statusConfig = getStatusBadge(order.status);
                   return (
                     <tr key={order.id} className="border-b hover:bg-muted/30">
@@ -101,13 +107,21 @@ const Orders = () => {
                             View
                           </Button>
                           {order.status === 'Processing' && (
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateOrderStatus(order.id, 'Shipped')}
+                            >
                               <Truck className="w-3 h-3 mr-1" />
                               Ship
                             </Button>
                           )}
                           {order.status === 'Shipped' && (
-                            <Button variant="outline" size="sm">
+                            <Button 
+                              variant="outline" 
+                              size="sm"
+                              onClick={() => updateOrderStatus(order.id, 'Delivered')}
+                            >
                               <Check className="w-3 h-3 mr-1" />
                               Deliver
                             </Button>
@@ -116,7 +130,8 @@ const Orders = () => {
                       </td>
                     </tr>
                   );
-                })}
+                })
+                )}
               </tbody>
             </table>
           </div>
