@@ -1,17 +1,76 @@
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { AlertTriangle, Plus, Minus } from 'lucide-react';
 
+import { toast } from '@/hooks/use-toast';
+
+interface InventoryItem {
+  id: string;
+  name: string;
+  sku: string;
+  stock: number;
+  reorderLevel: number;
+  status: string;
+}
+
 const Inventory = () => {
-  const inventory = [
-    { id: 1, name: 'Damascus Hunter Knife', sku: 'DMH-001', stock: 12, reorderLevel: 5, status: 'In Stock' },
-    { id: 2, name: 'Chef Master Pro', sku: 'CMP-002', stock: 3, reorderLevel: 5, status: 'Low Stock' },
-    { id: 3, name: 'Tactical Folder', sku: 'TF-003', stock: 15, reorderLevel: 5, status: 'In Stock' },
-    { id: 4, name: 'Damascus Chef Set', sku: 'DCS-004', stock: 0, reorderLevel: 5, status: 'Out of Stock' },
-    { id: 5, name: 'Utility Pocket Knife', sku: 'UPK-005', stock: 22, reorderLevel: 10, status: 'In Stock' },
-  ];
+  const [inventory, setInventory] = useState<InventoryItem[]>([]);
+  const [stockChanges, setStockChanges] = useState<Record<string, number>>({});
+
+  useEffect(() => {
+    loadInventory();
+  }, []);
+
+  const loadInventory = () => {
+    const savedProducts = localStorage.getItem('admin_products');
+    if (savedProducts) {
+      const products = JSON.parse(savedProducts);
+      const inventoryItems: InventoryItem[] = products.map((product: any) => {
+        const reorderLevel = 5;
+        let status = 'In Stock';
+        if (product.stock === 0) status = 'Out of Stock';
+        else if (product.stock <= reorderLevel) status = 'Low Stock';
+        
+        return {
+          id: product.id,
+          name: product.name,
+          sku: `SKU-${product.id.slice(0, 6)}`,
+          stock: product.stock,
+          reorderLevel,
+          status
+        };
+      });
+      setInventory(inventoryItems);
+    }
+  };
+
+  const updateStock = (id: string, change: number) => {
+    const amount = stockChanges[id] || 1;
+    const savedProducts = localStorage.getItem('admin_products');
+    if (savedProducts) {
+      const products = JSON.parse(savedProducts);
+      const updatedProducts = products.map((product: any) => {
+        if (product.id === id) {
+          const newStock = Math.max(0, product.stock + (change * amount));
+          return { ...product, stock: newStock };
+        }
+        return product;
+      });
+      localStorage.setItem('admin_products', JSON.stringify(updatedProducts));
+      loadInventory();
+      toast({
+        title: "Stock updated",
+        description: `Inventory has been ${change > 0 ? 'increased' : 'decreased'} by ${amount}`,
+      });
+    }
+  };
+
+  const lowStockCount = inventory.filter(item => 
+    item.status === 'Low Stock' || item.status === 'Out of Stock'
+  ).length;
 
   const getStatusBadge = (status: string) => {
     const variants: Record<string, { variant: any, className: string }> = {
@@ -30,15 +89,17 @@ const Inventory = () => {
       </div>
 
       {/* Low Stock Alert */}
-      <Card className="mb-6 border-yellow-300 bg-yellow-50">
-        <CardContent className="p-4 flex items-center gap-3">
-          <AlertTriangle className="w-5 h-5 text-yellow-600" />
-          <div>
-            <p className="font-semibold text-yellow-900">Low Stock Alert</p>
-            <p className="text-sm text-yellow-800">2 products are below reorder level</p>
-          </div>
-        </CardContent>
-      </Card>
+      {lowStockCount > 0 && (
+        <Card className="mb-6 border-yellow-300 bg-yellow-50">
+          <CardContent className="p-4 flex items-center gap-3">
+            <AlertTriangle className="w-5 h-5 text-yellow-600" />
+            <div>
+              <p className="font-semibold text-yellow-900">Low Stock Alert</p>
+              <p className="text-sm text-yellow-800">{lowStockCount} product{lowStockCount !== 1 ? 's are' : ' is'} below reorder level</p>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-0">
@@ -55,7 +116,14 @@ const Inventory = () => {
                 </tr>
               </thead>
               <tbody>
-                {inventory.map((item) => {
+                {inventory.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                      No inventory items. Add products to manage inventory.
+                    </td>
+                  </tr>
+                ) : (
+                  inventory.map((item) => {
                   const statusConfig = getStatusBadge(item.status);
                   return (
                     <tr key={item.id} className="border-b hover:bg-muted/30">
@@ -78,17 +146,29 @@ const Inventory = () => {
                       </td>
                       <td className="p-4">
                         <div className="flex items-center gap-2">
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => updateStock(item.id, -1)}
+                          >
                             <Minus className="w-3 h-3 mr-1" />
                             Remove
                           </Button>
                           <Input 
                             type="number" 
                             className="w-16 h-8 text-center" 
-                            defaultValue={1}
+                            value={stockChanges[item.id] || 1}
+                            onChange={(e) => setStockChanges({
+                              ...stockChanges,
+                              [item.id]: parseInt(e.target.value) || 1
+                            })}
                             min={1}
                           />
-                          <Button variant="outline" size="sm">
+                          <Button 
+                            variant="outline" 
+                            size="sm"
+                            onClick={() => updateStock(item.id, 1)}
+                          >
                             <Plus className="w-3 h-3 mr-1" />
                             Add
                           </Button>
@@ -96,7 +176,8 @@ const Inventory = () => {
                       </td>
                     </tr>
                   );
-                })}
+                })
+                )}
               </tbody>
             </table>
           </div>

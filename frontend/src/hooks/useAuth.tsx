@@ -29,16 +29,23 @@ export const AuthProvider = ({ children }: { children: ReactNode }) => {
   const { toast } = useToast();
 
   // Load user from localStorage on mount
-  useEffect(() => {
-    const storedToken = localStorage.getItem('token');
-    const storedUser = localStorage.getItem('user');
-    
-    if (storedToken && storedUser) {
+useEffect(() => {
+  const storedToken = localStorage.getItem('token');
+  const storedUser = localStorage.getItem('user');
+  
+  if (storedToken && storedUser && storedUser !== 'undefined' && storedUser !== 'null') {
+    try {
       setToken(storedToken);
       setUser(JSON.parse(storedUser));
+    } catch (error) {
+      // Clear corrupt data
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      console.error('Failed to parse stored user data');
     }
-    setLoading(false);
-  }, []);
+  }
+  setLoading(false);
+}, []);
 
   const login = async (email: string, password: string) => {
     try {
