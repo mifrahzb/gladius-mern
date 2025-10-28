@@ -1,11 +1,11 @@
 import express from 'express';
-import { getWishlist, addWishlist, removeWishlist } from '../controllers/wishlistController.js';
-import auth from '../middleware/auth.js';
+import { getWishlist, addToWishlist, removeFromWishlist } from '../controllers/wishlist.controller.js';
+import { protect } from '../middleware/auth.middleware.js';
 
 const router = express.Router();
 
-router.get('/', auth, getWishlist);
-router.post('/add/:productId', auth, addWishlist);
-router.delete('/remove/:productId', auth, removeWishlist);
+router.get('/', protect, getWishlist);
+router.post('/:productId', protect, addToWishlist);
+router.delete('/:productId', protect, removeFromWishlist);
 
 export default router;

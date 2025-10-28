@@ -82,3 +82,45 @@ export const updateOrderToDelivered = asyncHandler(async (req, res) => {
   const updated = await order.save();
   res.json(updated);
 });
+
+// @desc    Update order status
+// @route   PUT /api/orders/:id/status
+// @access  Private/Admin
+export const updateOrderStatus = async (req, res) => {
+  try {
+    const { status } = req.body;
+    
+    const validStatuses = ['pending', 'processing', 'shipped', 'delivered', 'cancelled'];
+    if (!validStatuses.includes(status)) {
+      return res.status(400).json({ 
+        message: `Invalid status. Must be one of: ${validStatuses.join(', ')}` 
+      });
+    }
+
+    const order = await Order.findById(req.params.id);
+
+    if (!order) {
+      return res.status(404).json({ message: 'Order not found' });
+    }
+
+    order.status = status;
+    
+    // Update timestamps
+    if (status === 'shipped') {
+      order.shippedAt = Date.now();
+    } else if (status === 'delivered') {
+      order.deliveredAt = Date.now();
+      order.isPaid = true; // Auto-mark as paid on delivery
+      order.paidAt = order.paidAt || Date.now();
+    }
+
+    const updatedOrder = await order.save();
+
+    res.json({
+      message: 'Order status updated successfully',
+      order: updatedOrder
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

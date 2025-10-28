@@ -24,6 +24,9 @@ import Search from "./pages/Search";
 import UserLogin from "./pages/UserLogin";
 import AddProduct from '@/pages/admin/AddProduct';
 import EditProduct from '@/pages/admin/EditProduct';
+import { AccountLayout } from './pages/account/AccountLayout';
+import { Profile } from './pages/account/Profile';
+import { OrderHistory } from './pages/account/OrderHistory';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -64,6 +67,14 @@ const App = () => (
                 <Route path="orders" element={<Orders />} />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="customers" element={<Customers />} />
+              </Route>
+                
+              {/* Account Routes */}
+              <Route path="/account" element={<AccountLayout />}>
+                <Route path="profile" element={<Profile />} />
+                <Route path="orders" element={<OrderHistory />} />
+                <Route path="addresses" element={<Addresses />} />
+                <Route path="security" element={<Security />} />
               </Route>
               
               {/* ADD ALL CUSTOM ROUTES ABOVE THE CATCH-ALL "*" ROUTE */}
