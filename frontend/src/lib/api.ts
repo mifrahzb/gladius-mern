@@ -86,35 +86,25 @@ export const cartApi = {
 // Orders API calls
 export const ordersApi = {
   getAll: () => api.get('/orders'),
-  
   getById: (id: string) => api.get(`/orders/${id}`),
-  
-  create: (data: any) => api.post('/orders', data),
-  
-  updateStatus: (id: string, status: string) =>
+  create: (orderData: any) => api.post('/orders', orderData),
+  updateStatus: (id: string, status: string) => 
     api.put(`/orders/${id}/status`, { status }),
+  getUserOrders: () => api.get('/orders/myorders')
 };
 
 // Wishlist API calls
 export const wishlistApi = {
   get: () => api.get('/wishlist'),
-  
-  add: (productId: string) => api.post('/wishlist/add', { productId }),
-  
-  remove: (productId: string) => api.delete(`/wishlist/remove/${productId}`),
+  add: (productId: string) => api.post(`/wishlist/${productId}`),
+  remove: (productId: string) => api.delete(`/wishlist/${productId}`)
 };
 
 // Reviews API calls
 export const reviewsApi = {
+  create: (data: any) => api.post('/reviews', data),
   getByProduct: (productId: string) => api.get(`/reviews/product/${productId}`),
-  
-  create: (data: { productId: string; rating: number; comment: string }) =>
-    api.post('/reviews', data),
-  
-  update: (id: string, data: { rating: number; comment: string }) =>
-    api.put(`/reviews/${id}`, data),
-  
-  delete: (id: string) => api.delete(`/reviews/${id}`),
+  delete: (id: string) => api.delete(`/reviews/${id}`)
 };
 
 // Coupons API calls

@@ -1,74 +1,112 @@
 import Review from '../models/Review.js';
 import Product from '../models/Product.js';
-import asyncHandler from 'express-async-handler';
+import Order from '../models/Order.js';
 
-// Add review
-export const addReview = asyncHandler(async (req, res) => {
-  const { rating, title, comment } = req.body;
-  const productId = req.params.productId;
+// @desc    Create product review
+// @route   POST /api/reviews
+// @access  Private
+export const createReview = async (req, res) => {
+  try {
+    const { productId, rating, comment } = req.body;
 
-  const existing = await Review.findOne({ user: req.user._id, product: productId });
-  if (existing) return res.status(400).json({ message: 'You already reviewed this product' });
+    // Check if product exists
+    const product = await Product.findById(productId);
+    if (!product) {
+      return res.status(404).json({ message: 'Product not found' });
+    }
 
-  const review = new Review({
-    user: req.user._id,
-    product: productId,
-    rating,
-    title,
-    comment,
-    approved: false
-  });
+    // Check if user already reviewed this product
+    const existingReview = await Review.findOne({
+      product: productId,
+      user: req.user._id
+    });
 
-  await review.save();
+    if (existingReview) {
+      return res.status(400).json({ 
+        message: 'You have already reviewed this product' 
+      });
+    }
 
-  const reviews = await Review.find({ product: productId, approved: true });
-  const numReviews = reviews.length;
-  const ratingAvg = numReviews ? (reviews.reduce((sum, r) => sum + r.rating, 0) / numReviews) : 0;
+    // Check if user purchased this product (optional but recommended)
+    const hasPurchased = await Order.findOne({
+      user: req.user._id,
+      'orderItems.product': productId,
+      status: 'delivered'
+    });
 
-  await Product.findByIdAndUpdate(productId, { numReviews, rating: ratingAvg });
+    const review = await Review.create({
+      product: productId,
+      user: req.user._id,
+      rating,
+      comment,
+      verified: !!hasPurchased
+    });
 
-  res.status(201).json({ message: 'Review submitted for moderation' });
-});
+    // Update product rating
+    await updateProductRating(productId);
 
-// Get reviews for product
-export const getProductReviews = asyncHandler(async (req, res) => {
-  const productId = req.params.productId;
-  const reviews = await Review.find({ product: productId, approved: true }).populate('user', 'name');
-  res.json(reviews);
-});
-
-// Approve/Reject review (admin)
-export const moderateReview = asyncHandler(async (req, res) => {
-  const review = await Review.findById(req.params.id);
-  if (!review) return res.status(404).json({ message: 'Review not found' });
-
-  review.approved = req.body.approved === true;
-  await review.save();
-  res.json({ message: 'Review updated', review });
-});
-
-// Update review (owner)
-export const updateReview = asyncHandler(async (req, res) => {
-  const review = await Review.findById(req.params.id);
-  if (!review) return res.status(404).json({ message: 'Review not found' });
-  if (review.user.toString() !== req.user._id.toString()) return res.status(403).json({ message: 'Not authorized' });
-
-  review.rating = req.body.rating ?? review.rating;
-  review.title = req.body.title ?? review.title;
-  review.comment = req.body.comment ?? review.comment;
-  await review.save();
-  res.json(review);
-});
-
-// Delete review (owner or admin)
-export const deleteReview = asyncHandler(async (req, res) => {
-  const review = await Review.findById(req.params.id);
-  if (!review) return res.status(404).json({ message: 'Review not found' });
-
-  if (review.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
-    return res.status(403).json({ message: 'Not authorized' });
+    res.status(201).json({
+      message: 'Review created successfully',
+      review
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
   }
+};
 
-  await review.remove();
-  res.json({ message: 'Review removed' });
-});
+// @desc    Get reviews for a product
+// @route   GET /api/reviews/product/:productId
+// @access  Public
+export const getProductReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({ product: req.params.productId })
+      .populate('user', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({ reviews });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// Helper function to update product rating
+const updateProductRating = async (productId) => {
+  const reviews = await Review.find({ product: productId });
+  
+  if (reviews.length > 0) {
+    const avgRating = reviews.reduce((acc, review) => acc + review.rating, 0) / reviews.length;
+    
+    await Product.findByIdAndUpdate(productId, {
+      rating: avgRating.toFixed(1),
+      numReviews: reviews.length
+    });
+  }
+};
+
+// @desc    Delete review
+// @route   DELETE /api/reviews/:id
+// @access  Private
+export const deleteReview = async (req, res) => {
+  try {
+    const review = await Review.findById(req.params.id);
+
+    if (!review) {
+      return res.status(404).json({ message: 'Review not found' });
+    }
+
+    // Only review owner or admin can delete
+    if (review.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+      return res.status(403).json({ message: 'Not authorized' });
+    }
+
+    const productId = review.product;
+    await review.deleteOne();
+    
+    // Update product rating
+    await updateProductRating(productId);
+
+    res.json({ message: 'Review deleted' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};

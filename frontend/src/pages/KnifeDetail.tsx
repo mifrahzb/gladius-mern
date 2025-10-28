@@ -6,8 +6,11 @@ import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
+import { useAuth } from '@/hooks/useAuth';
 import { productsApi, reviewsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { ProductReviews } from '@/components/ProductReviews';
+import { useWishlist } from '@/context/WishlistContext';
 
 const KnifeDetail = () => {
   const { id } = useParams();
@@ -18,6 +21,10 @@ const KnifeDetail = () => {
   const [loading, setLoading] = useState(true);
   const { addToCart } = useCart();
   const { toast } = useToast();
+  const { user } = useAuth();
+  const { isInWishlist, addToWishlist, removeFromWishlist } = useWishlist();
+
+  const inWishlist = knife ? isInWishlist(knife._id) : false;
 
   useEffect(() => {
     if (id) {
@@ -51,6 +58,33 @@ const KnifeDetail = () => {
     }
   };
 
+  const handleWishlist = async () => {
+    if (!user) {
+      toast({
+        variant: 'destructive',
+        title: 'Please login to add to wishlist'
+      });
+      return;
+    }
+
+    if (!knife) return;
+
+    try {
+      if (inWishlist) {
+        await removeFromWishlist(knife._id);
+        toast({ title: 'Removed from wishlist' });
+      } else {
+        await addToWishlist(knife._id);
+        toast({ title: 'Added to wishlist!' });
+      }
+    } catch (error) {
+      toast({
+        variant: 'destructive',
+        title: 'Something went wrong'
+      });
+    }
+  };
+
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -71,32 +105,33 @@ const KnifeDetail = () => {
     <div className="min-h-screen bg-background">
       <div className="container mx-auto px-4 py-8">
         <div className="grid lg:grid-cols-2 gap-12">
-          {/* Image Gallery */}
+          {/* Product Images */}
           <div className="space-y-4">
-            <div className="aspect-square rounded-lg overflow-hidden bg-secondary">
+            {/* Main Image */}
+            <div className="aspect-square overflow-hidden rounded-lg bg-gray-100">
               <img
-                src={knife.images?.[selectedImage] || '/api/placeholder/600/600'}
+                src={
+                  typeof knife.images?.[0] === 'string'
+                    ? knife.images[0]
+                    : knife.images?.[0]?.url || '/placeholder-knife.jpg'
+                }
                 alt={knife.name}
-                className="w-full h-full object-cover"
+                className="h-full w-full object-cover object-center"
               />
             </div>
-            
+  
+            {/* Thumbnail Gallery */}
             {knife.images && knife.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
-                {knife.images.map((image: string, index: number) => (
-                  <button
-                    key={index}
-                    onClick={() => setSelectedImage(index)}
-                    className={`aspect-square rounded-lg overflow-hidden border-2 transition-colors ${
-                      selectedImage === index ? 'border-brown' : 'border-border'
-                    }`}
-                  >
+                {knife.images.map((img, idx) => (
+                  <div key={idx} className="aspect-square overflow-hidden rounded-md cursor-pointer hover:opacity-75">
                     <img
-                      src={image}
-                      alt={`${knife.name} view ${index + 1}`}
-                      className="w-full h-full object-cover"
+                      src={typeof img === 'string' ? img : img.url}
+                      alt={`${knife.name} view ${idx + 1}`}
+                      className="h-full w-full object-cover"
+                      onClick={() => setSelectedImage(idx)}
                     />
-                  </button>
+                  </div>
                 ))}
               </div>
             )}
@@ -179,8 +214,13 @@ const KnifeDetail = () => {
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Add to Cart - ${knife.price * quantity}
                 </Button>
-                <Button variant="outline" size="lg">
-                  <Heart className="h-5 w-5" />
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  onClick={handleWishlist}
+                  className={inWishlist ? 'text-red-500' : ''}
+                >
+                  <Heart className={`h-5 w-5 ${inWishlist ? 'fill-current' : ''}`} />
                 </Button>
                 <Button variant="outline" size="lg">
                   <Share2 className="h-5 w-5" />
@@ -244,6 +284,7 @@ const KnifeDetail = () => {
             
             <TabsContent value="reviews" className="mt-8">
               <div className="space-y-6">
+                <ProductReviews productId={id!} />
                 {reviews.length === 0 ? (
                   <Card>
                     <CardContent className="p-6 text-center text-muted-foreground">

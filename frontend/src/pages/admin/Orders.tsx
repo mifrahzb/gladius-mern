@@ -1,142 +1,166 @@
-import { useState, useEffect } from 'react';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
-import { Eye, Truck, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { ordersApi } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { Eye } from "lucide-react";
 
-import { toast } from '@/hooks/use-toast';
+const STATUS_COLORS: Record<string, string> = {
+  pending: 'bg-yellow-100 text-yellow-800',
+  processing: 'bg-blue-100 text-blue-800',
+  shipped: 'bg-purple-100 text-purple-800',
+  delivered: 'bg-green-100 text-green-800',
+  cancelled: 'bg-red-100 text-red-800'
+};
 
-interface Order {
-  id: string;
-  customer: string;
-  email: string;
-  products: number;
-  total: number;
-  status: string;
-  date: string;
-}
+export const Orders = () => {
+  const [orders, setOrders] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
-const Orders = () => {
-  const [orders, setOrders] = useState<Order[]>([]);
-
-  useEffect(() => {
-    loadOrders();
-  }, []);
-
-  const loadOrders = () => {
-    const savedOrders = localStorage.getItem('admin_orders');
-    if (savedOrders) {
-      setOrders(JSON.parse(savedOrders));
+  // Fetch all orders from backend
+  const fetchOrders = async () => {
+    try {
+      setLoading(true);
+      const response = await ordersApi.getAll();
+      setOrders(response.data.orders || response.data);
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to load orders',
+        description: error.response?.data?.message || 'Please try again later.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const updateOrderStatus = (orderId: string, newStatus: string) => {
-    const updatedOrders = orders.map(order =>
-      order.id === orderId ? { ...order, status: newStatus } : order
-    );
-    localStorage.setItem('admin_orders', JSON.stringify(updatedOrders));
-    setOrders(updatedOrders);
-    toast({
-      title: "Order updated",
-      description: `Order ${orderId} status changed to ${newStatus}`,
-    });
+  useEffect(() => {
+    fetchOrders();
+  }, []);
+
+  // Update order status
+  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+    try {
+      await ordersApi.updateStatus(orderId, newStatus);
+      toast({
+        title: 'Order updated successfully',
+        description: `Status changed to ${newStatus}`
+      });
+      fetchOrders(); // refresh updated list
+    } catch (error: any) {
+      toast({
+        variant: 'destructive',
+        title: 'Failed to update order',
+        description: error.response?.data?.message || 'Please try again'
+      });
+    }
   };
 
-  const getStatusBadge = (status: string) => {
-    const variants: Record<string, { variant: any, className: string }> = {
-      'Processing': { variant: 'outline', className: 'bg-yellow-100 text-yellow-800 border-yellow-300' },
-      'Shipped': { variant: 'outline', className: 'bg-blue-100 text-blue-800 border-blue-300' },
-      'Delivered': { variant: 'outline', className: 'bg-green-100 text-green-800 border-green-300' },
-    };
-    return variants[status] || variants.Processing;
-  };
+  if (loading) {
+    return <div className="flex justify-center p-8">Loading orders...</div>;
+  }
 
   return (
     <div className="p-8">
       <div className="mb-8">
-        <h1 className="text-3xl font-bold mb-2">Orders</h1>
-        <p className="text-muted-foreground">Manage and fulfill customer orders</p>
+        <h1 className="text-3xl font-bold mb-2">Orders Management</h1>
+        <p className="text-muted-foreground">View, update, and manage all customer orders</p>
       </div>
 
-      <Card>
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead className="bg-muted/50 border-b">
-                <tr>
-                  <th className="text-left p-4 font-semibold">Order ID</th>
-                  <th className="text-left p-4 font-semibold">Customer</th>
-                  <th className="text-left p-4 font-semibold">Products</th>
-                  <th className="text-left p-4 font-semibold">Total</th>
-                  <th className="text-left p-4 font-semibold">Status</th>
-                  <th className="text-left p-4 font-semibold">Date</th>
-                  <th className="text-left p-4 font-semibold">Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {orders.length === 0 ? (
-                  <tr>
-                    <td colSpan={7} className="p-8 text-center text-muted-foreground">
-                      No orders yet. Orders will appear here when customers make purchases.
-                    </td>
-                  </tr>
-                ) : (
-                  orders.map((order) => {
-                  const statusConfig = getStatusBadge(order.status);
-                  return (
-                    <tr key={order.id} className="border-b hover:bg-muted/30">
-                      <td className="p-4 font-semibold">{order.id}</td>
-                      <td className="p-4">
-                        <div>
-                          <p className="font-medium">{order.customer}</p>
-                          <p className="text-sm text-muted-foreground">{order.email}</p>
-                        </div>
-                      </td>
-                      <td className="p-4">{order.products} items</td>
-                      <td className="p-4 font-semibold">${order.total}</td>
-                      <td className="p-4">
-                        <Badge variant={statusConfig.variant} className={statusConfig.className}>
-                          {order.status}
-                        </Badge>
-                      </td>
-                      <td className="p-4 text-muted-foreground">{order.date}</td>
-                      <td className="p-4">
-                        <div className="flex gap-2">
-                          <Button variant="outline" size="sm">
-                            <Eye className="w-3 h-3 mr-1" />
-                            View
-                          </Button>
-                          {order.status === 'Processing' && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateOrderStatus(order.id, 'Shipped')}
-                            >
-                              <Truck className="w-3 h-3 mr-1" />
-                              Ship
-                            </Button>
-                          )}
-                          {order.status === 'Shipped' && (
-                            <Button 
-                              variant="outline" 
-                              size="sm"
-                              onClick={() => updateOrderStatus(order.id, 'Delivered')}
-                            >
-                              <Check className="w-3 h-3 mr-1" />
-                              Deliver
-                            </Button>
-                          )}
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-                )}
-              </tbody>
-            </table>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              <TableHead>Order ID</TableHead>
+              <TableHead>Customer</TableHead>
+              <TableHead>Date</TableHead>
+              <TableHead>Total</TableHead>
+              <TableHead>Payment</TableHead>
+              <TableHead>Status</TableHead>
+              <TableHead>Update Status</TableHead>
+              <TableHead>Actions</TableHead>
+            </TableRow>
+          </TableHeader>
+
+          <TableBody>
+            {orders.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={8} className="text-center py-8 text-muted-foreground">
+                  No orders found.
+                </TableCell>
+              </TableRow>
+            ) : (
+              orders.map((order) => (
+                <TableRow key={order._id}>
+                  <TableCell className="font-mono text-sm">{order._id.slice(-8)}</TableCell>
+
+                  <TableCell>
+                    <div>
+                      <p className="font-medium">{order.user?.name || 'N/A'}</p>
+                      <p className="text-sm text-gray-500">{order.user?.email}</p>
+                    </div>
+                  </TableCell>
+
+                  <TableCell>{new Date(order.createdAt).toLocaleDateString()}</TableCell>
+                  <TableCell>${order.totalPrice?.toFixed(2)}</TableCell>
+
+                  <TableCell>
+                    <Badge variant={order.isPaid ? 'success' : 'secondary'}>
+                      {order.isPaid ? 'Paid' : 'Unpaid'}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell>
+                    <Badge className={STATUS_COLORS[order.status]}>
+                      {order.status}
+                    </Badge>
+                  </TableCell>
+
+                  <TableCell>
+                    <Select
+                      value={order.status}
+                      onValueChange={(value) => updateOrderStatus(order._id, value)}
+                    >
+                      <SelectTrigger className="w-[140px]">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="pending">Pending</SelectItem>
+                        <SelectItem value="processing">Processing</SelectItem>
+                        <SelectItem value="shipped">Shipped</SelectItem>
+                        <SelectItem value="delivered">Delivered</SelectItem>
+                        <SelectItem value="cancelled">Cancelled</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </TableCell>
+
+                  <TableCell>
+                    <Button variant="outline" size="sm">
+                      <Eye className="w-3 h-3 mr-1" /> View
+                    </Button>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
+      </div>
     </div>
   );
 };
