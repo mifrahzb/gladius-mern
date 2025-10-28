@@ -9,7 +9,10 @@ const productSchema = mongoose.Schema(
     price: { type: Number, required: true },
     stock: { type: Number, default: 0 },
     category: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
-    images: [{ url: String, public_id: String }],
+    images: [{
+      url: { type: String, required: true },
+      public_id: String
+    }],
     isFeatured: { type: Boolean, default: false },
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 }
