@@ -56,22 +56,16 @@ export const authApi = {
 
 // Products API calls
 export const productsApi = {
-  getAll: (params?: { category?: string; search?: string; page?: number }) =>
-    api.get('/products', { params }),
-  
+  getAll: (params?: any) => api.get('/products', { params }),
   getById: (id: string) => api.get(`/products/${id}`),
-  
-  create: (data: FormData) =>
-    api.post('/products', data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  
-  update: (id: string, data: FormData) =>
-    api.put(`/products/${id}`, data, {
-      headers: { 'Content-Type': 'multipart/form-data' },
-    }),
-  
-  delete: (id: string) => api.delete(`/products/${id}`),
+  create: (data: any) => {
+    // Don't set Content-Type header - let browser set it with boundary
+    return api.post('/products', data);
+  },
+  update: (id: string, data: any) => {
+    return api.put(`/products/${id}`, data);
+  },
+  delete: (id: string) => api.delete(`/products/${id}`)
 };
 
 // Cart API calls

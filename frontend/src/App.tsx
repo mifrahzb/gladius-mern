@@ -22,6 +22,8 @@ import Customers from "./pages/admin/Customers";
 import NotFound from "./pages/NotFound";
 import Search from "./pages/Search";
 import UserLogin from "./pages/UserLogin";
+import AddProduct from '@/pages/admin/AddProduct';
+import EditProduct from '@/pages/admin/EditProduct';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -57,6 +59,8 @@ const App = () => (
               <Route path="/admin/dashboard" element={<AdminDashboard />}>
                 <Route index element={<Overview />} />
                 <Route path="products" element={<Products />} />
+                <Route path="products/new" element={<AddProduct />} />
+                <Route path="products/edit/:id" element={<EditProduct />} />
                 <Route path="orders" element={<Orders />} />
                 <Route path="inventory" element={<Inventory />} />
                 <Route path="customers" element={<Customers />} />
