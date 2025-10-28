@@ -83,7 +83,7 @@ export const Orders = () => {
         <p className="text-muted-foreground">View, update, and manage all customer orders</p>
       </div>
 
-      <div className="overflow-x-auto bg-white rounded-lg shadow-sm">
+      <div className="overflow-x-auto bg-card rounded-lg border">
         <Table>
           <TableHeader>
             <TableRow>
@@ -113,7 +113,7 @@ export const Orders = () => {
                   <TableCell>
                     <div>
                       <p className="font-medium">{order.user?.name || 'N/A'}</p>
-                      <p className="text-sm text-gray-500">{order.user?.email}</p>
+                      <p className="text-sm text-muted-foreground">{order.user?.email}</p>
                     </div>
                   </TableCell>
 
@@ -121,7 +121,7 @@ export const Orders = () => {
                   <TableCell>${order.totalPrice?.toFixed(2)}</TableCell>
 
                   <TableCell>
-                    <Badge variant={order.isPaid ? 'success' : 'secondary'}>
+                    <Badge className={order.isPaid ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'}>
                       {order.isPaid ? 'Paid' : 'Unpaid'}
                     </Badge>
                   </TableCell>

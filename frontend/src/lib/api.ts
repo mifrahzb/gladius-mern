@@ -137,4 +137,10 @@ export const emailApi = {
   subscribe: (email: string) => api.post('/email/subscribe', { email }),
 };
 
+// User API calls
+export const userApi = {
+  updateProfile: (data: any) => api.put('/auth/profile', data),
+  getProfile: () => api.get('/auth/profile'),
+};
+
 export default api;

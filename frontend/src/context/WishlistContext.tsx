@@ -1,71 +1,43 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { wishlistApi } from '@/lib/api';
-import { useAuth } from './AuthContext';
 
 interface WishlistContextType {
   wishlist: string[];
+  isInWishlist: (productId: string) => boolean;
   addToWishlist: (productId: string) => Promise<void>;
   removeFromWishlist: (productId: string) => Promise<void>;
-  isInWishlist: (productId: string) => boolean;
-  loading: boolean;
 }
 
 const WishlistContext = createContext<WishlistContextType | undefined>(undefined);
 
 export const WishlistProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const [wishlist, setWishlist] = useState<string[]>([]);
-  const [loading, setLoading] = useState(false);
-  const { user } = useAuth();
 
   useEffect(() => {
-    if (user) {
-      fetchWishlist();
-    } else {
-      setWishlist([]);
+    // Load wishlist from localStorage
+    const saved = localStorage.getItem('wishlist');
+    if (saved) {
+      setWishlist(JSON.parse(saved));
     }
-  }, [user]);
-
-  const fetchWishlist = async () => {
-    try {
-      const response = await wishlistApi.get();
-      setWishlist(response.data.wishlist.products.map(p => p._id || p));
-    } catch (error) {
-      console.error('Failed to fetch wishlist');
-    }
-  };
-
-  const addToWishlist = async (productId: string) => {
-    try {
-      setLoading(true);
-      await wishlistApi.add(productId);
-      setWishlist([...wishlist, productId]);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const removeFromWishlist = async (productId: string) => {
-    try {
-      setLoading(true);
-      await wishlistApi.remove(productId);
-      setWishlist(wishlist.filter(id => id !== productId));
-    } finally {
-      setLoading(false);
-    }
-  };
+  }, []);
 
   const isInWishlist = (productId: string) => {
     return wishlist.includes(productId);
   };
 
+  const addToWishlist = async (productId: string) => {
+    const updated = [...wishlist, productId];
+    setWishlist(updated);
+    localStorage.setItem('wishlist', JSON.stringify(updated));
+  };
+
+  const removeFromWishlist = async (productId: string) => {
+    const updated = wishlist.filter(id => id !== productId);
+    setWishlist(updated);
+    localStorage.setItem('wishlist', JSON.stringify(updated));
+  };
+
   return (
-    <WishlistContext.Provider value={{ 
-      wishlist, 
-      addToWishlist, 
-      removeFromWishlist, 
-      isInWishlist,
-      loading 
-    }}>
+    <WishlistContext.Provider value={{ wishlist, isInWishlist, addToWishlist, removeFromWishlist }}>
       {children}
     </WishlistContext.Provider>
   );

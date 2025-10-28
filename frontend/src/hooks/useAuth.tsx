@@ -6,6 +6,7 @@ interface User {
   _id: string;
   name: string;
   email: string;
+  phone?: string;
   role: string;
 }
 
@@ -15,6 +16,7 @@ interface AuthContextType {
   login: (email: string, password: string) => Promise<void>;
   register: (name: string, email: string, password: string) => Promise<void>;
   logout: () => void;
+  updateUser: (user: User) => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
   loading: boolean;
@@ -109,12 +111,18 @@ useEffect(() => {
     });
   };
 
+  const updateUser = (updatedUser: User) => {
+  setUser(updatedUser);
+  localStorage.setItem('user', JSON.stringify(updatedUser));
+};
+
   const value = {
     user,
     token,
     login,
     register,
     logout,
+    updateUser,
     isAuthenticated: !!token,
     isAdmin: user?.role === 'admin',
     loading,

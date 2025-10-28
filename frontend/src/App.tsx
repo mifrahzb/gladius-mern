@@ -3,8 +3,8 @@ import { Toaster as Sonner } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
-import { CartProvider } from "@/hooks/useCart";
 import { AuthProvider } from "@/hooks/useAuth";
+import { WishlistProvider } from './context/WishlistContext';
 import Index from "./pages/Index";
 import About from "./pages/About";
 import Collections from "./pages/Collections";
@@ -27,6 +27,8 @@ import EditProduct from '@/pages/admin/EditProduct';
 import { AccountLayout } from './pages/account/AccountLayout';
 import { Profile } from './pages/account/Profile';
 import { OrderHistory } from './pages/account/OrderHistory';
+import { Addresses } from './pages/account/Addresses';
+import { Security } from './pages/account/Security';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -41,7 +43,7 @@ const App = () => (
   <QueryClientProvider client={queryClient}>
     <TooltipProvider>
       <AuthProvider>
-        <CartProvider>
+        <WishlistProvider>
           <Toaster />
           <Sonner />
           <BrowserRouter>
@@ -81,7 +83,7 @@ const App = () => (
               <Route path="*" element={<NotFound />} />
             </Routes>
           </BrowserRouter>
-        </CartProvider>
+        </WishlistProvider>
       </AuthProvider>
     </TooltipProvider>
   </QueryClientProvider>
