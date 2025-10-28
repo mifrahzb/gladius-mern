@@ -3,7 +3,7 @@ import { Star } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
-import { useAuth } from '@/context/AuthContext';
+import { useAuth } from '@/hooks/useAuth';
 import { reviewsApi } from '@/lib/api';
 
 interface Review {
@@ -79,20 +79,24 @@ export const ProductReviews: React.FC<{ productId: string }> = ({ productId }) =
     }
   };
 
-  const StarRating = ({ rating, onRatingChange, interactive = false }) => (
-    <div className="flex gap-1">
-      {[1, 2, 3, 4, 5].map((star) => (
-        <Star
-          key={star}
-          size={20}
-          className={`${
-            star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
-          } ${interactive ? 'cursor-pointer hover:scale-110 transition' : ''}`}
-          onClick={() => interactive && onRatingChange?.(star)}
-        />
-      ))}
-    </div>
-  );
+  const StarRating = ({ rating, onRatingChange, interactive = false }: { 
+  rating: number; 
+  onRatingChange?: (rating: number) => void;  // Make it optional
+  interactive?: boolean;
+}) => (
+  <div className="flex gap-1">
+    {[1, 2, 3, 4, 5].map((star) => (
+      <Star
+        key={star}
+        size={20}
+        className={`${
+          star <= rating ? 'fill-yellow-400 text-yellow-400' : 'text-gray-300'
+        } ${interactive ? 'cursor-pointer hover:scale-110 transition' : ''}`}
+        onClick={() => interactive && onRatingChange?.(star)}
+      />
+    ))}
+  </div>
+);
 
   return (
     <div className="mt-12">

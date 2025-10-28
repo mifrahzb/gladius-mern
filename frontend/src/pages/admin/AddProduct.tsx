@@ -64,7 +64,7 @@ export const AddProduct = () => {
     <div className="p-6 max-w-4xl">
       <h1 className="text-3xl font-bold mb-6">Add New Product</h1>
 
-      <form onSubmit={handleSubmit} className="space-y-6 bg-white p-6 rounded-lg shadow">
+      <form onSubmit={handleSubmit} className="space-y-6 bg-card p-6 rounded-lg border">
         {/* Basic Info */}
         <div className="grid grid-cols-2 gap-4">
           <div>
@@ -213,3 +213,5 @@ export const AddProduct = () => {
     </div>
   );
 };
+
+export default AddProduct;
