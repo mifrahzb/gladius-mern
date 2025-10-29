@@ -179,7 +179,7 @@ const Search = () => {
                     
                     <CardContent className="p-6">
                       <Badge variant="outline" className="mb-2">
-                        {product.category}
+                        {typeof product.category === 'object' ? product.category.name : product.category || 'No Category'}
                       </Badge>
                       <h3 
                         className="text-lg font-bold text-foreground mb-2 hover:text-brown cursor-pointer"

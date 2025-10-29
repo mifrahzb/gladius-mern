@@ -98,16 +98,16 @@ const Products = () => {
 
   // Helper function to get image URL
   const getImageUrl = (images?: Array<{ url: string; public_id?: string } | string>): string => {
-    if (!images || images.length === 0) {
-      return 'https://via.placeholder.com/400x300?text=No+Image';
-    }
-    
-    const firstImage = images[0];
-    if (typeof firstImage === 'string') {
-      return firstImage;
-    }
-    return firstImage.url || 'https://via.placeholder.com/400x300?text=No+Image';
-  };
+  if (!images || images.length === 0) {
+    return 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18"%3ENo Image%3C/text%3E%3C/svg%3E';
+  }
+  
+  const firstImage = images[0];
+  if (typeof firstImage === 'string') {
+    return firstImage;
+  }
+  return firstImage.url || 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="18"%3ENo Image%3C/text%3E%3C/svg%3E';
+};
 
   // Filter products based on search
   const filteredProducts = Array.isArray(products) 
@@ -178,7 +178,7 @@ const Products = () => {
                       alt={product.name}
                       className="w-full h-full object-cover hover:scale-105 transition-transform duration-300"
                       onError={(e) => {
-                        (e.target as HTMLImageElement).src = 'https://via.placeholder.com/400x300?text=Image+Not+Found';
+                        (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23e5e5e5" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16"%3EImage Not Found%3C/text%3E%3C/svg%3E';
                       }}
                     />
                     {product.stock === 0 && (
@@ -194,7 +194,7 @@ const Products = () => {
                       {product.name}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2 capitalize">
-                      {product.category || 'Uncategorized'}
+                      {typeof product.category === 'object' ? product.category.name : product.category || 'Uncategorized'}
                     </p>
                     
                     {product.description && (
