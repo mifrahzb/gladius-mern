@@ -7,60 +7,68 @@ import fs from 'fs';
 // @desc    Get all products with filters
 // @route   GET /api/products
 // @access  Public
-export const getProducts = asyncHandler(async (req, res) => {
-  const { 
-    keyword, 
-    category, 
-    minPrice, 
-    maxPrice, 
-    page = 1, 
-    limit = 12 
-  } = req.query;
+// @desc    Get products by category ID or name
+// @route   GET /api/products
+// @access  Public
+export const getProducts = async (req, res) => {
+  try {
+    const pageSize = Number(req.query.limit) || 12;
+    const page = Number(req.query.page) || 1;
+    const keyword = req.query.keyword
+      ? {
+          name: {
+            $regex: req.query.keyword,
+            $options: 'i',
+          },
+        }
+      : {};
 
-  // Build query
-  const query = {};
+    let categoryFilter = {};
+    
+    // Handle category filtering
+    if (req.query.category) {
+      // Check if it's a valid ObjectId
+      if (mongoose.Types.ObjectId.isValid(req.query.category)) {
+        categoryFilter = { category: req.query.category };
+      } else {
+        // If it's not an ObjectId, try to find category by name
+        const category = await Category.findOne({
+          $or: [
+            { name: new RegExp(req.query.category, 'i') },
+            { slug: new RegExp(req.query.category, 'i') }
+          ]
+        });
+        if (category) {
+          categoryFilter = { category: category._id };
+        }
+      }
+    }
 
-  // Search by keyword
-  if (keyword) {
-    query.$or = [
-      { name: { $regex: keyword, $options: 'i' } },
-      { description: { $regex: keyword, $options: 'i' } }
-    ];
+    const count = await Product.countDocuments({
+      ...keyword,
+      ...categoryFilter,
+    });
+
+    const products = await Product.find({
+      ...keyword,
+      ...categoryFilter,
+    })
+      .limit(pageSize)
+      .skip(pageSize * (page - 1))
+      .populate('category', 'name slug')
+      .sort({ createdAt: -1 });
+
+    res.json({
+      products,
+      page,
+      pages: Math.ceil(count / pageSize),
+      totalProducts: count,
+    });
+  } catch (error) {
+    console.error('❌ Get products error:', error);
+    res.status(500).json({ message: error.message });
   }
-
-  // Filter by category
-  if (category && category !== 'all') {
-    query.category = category;
-  }
-
-  // Filter by price range
-  if (minPrice || maxPrice) {
-    query.price = {};
-    if (minPrice) query.price.$gte = Number(minPrice);
-    if (maxPrice) query.price.$lte = Number(maxPrice);
-  }
-
-  // Pagination
-  const pageNumber = Number(page);
-  const pageSize = Number(limit);
-  const skip = (pageNumber - 1) * pageSize;
-
-  // Execute query
-  const products = await Product.find(query)
-    .limit(pageSize)
-    .skip(skip)
-    .sort({ createdAt: -1 });
-
-  const count = await Product.countDocuments(query);
-
-  res.json({
-    products,
-    page: pageNumber,
-    pages: Math.ceil(count / pageSize),
-    total: count
-  });
-});
-
+};
 // @desc    Get single product by ID
 // @route   GET /api/products/:id
 // @access  Public

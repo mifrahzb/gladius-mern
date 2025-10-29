@@ -2,75 +2,77 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 
 interface CartItem {
-  id: string;           // Changed from _id to id
+  id: string;
   name: string;
   price: number;
   image: string;
-  category: string;     // Added category
+  category: any;
+  countInStock: number;
   quantity: number;
-  stock?: number;       // Made optional
 }
 
 interface CartStore {
   items: CartItem[];
-  addToCart: (item: Omit<CartItem, 'quantity'> & { quantity?: number }) => void;
+  addToCart: (product: Omit<CartItem, 'quantity'>) => void;
   removeFromCart: (id: string) => void;
   updateQuantity: (id: string, quantity: number) => void;
   clearCart: () => void;
-  cartTotal: number;    // Changed from getTotalPrice
-  cartCount: number;    // Changed from getTotalItems
+  getTotalPrice: () => number;
+  getTotalItems: () => number;
 }
 
 export const useCart = create<CartStore>()(
   persist(
     (set, get) => ({
       items: [],
-      
-      addToCart: (item) => {
-        const items = get().items;
-        const existingItem = items.find(i => i.id === item.id);
-        
-        if (existingItem) {
-          set({
-            items: items.map(i =>
-              i.id === item.id
-                ? { ...i, quantity: i.quantity + (item.quantity || 1) }
-                : i
-            )
-          });
-        } else {
-          set({ items: [...items, { ...item, quantity: item.quantity || 1 }] });
-        }
+      addToCart: (product) => {
+        set((state) => {
+          const existingItem = state.items.find(item => item.id === product.id);
+          
+          if (existingItem) {
+            // Update quantity if item exists
+            return {
+              items: state.items.map(item =>
+                item.id === product.id
+                  ? { ...item, quantity: item.quantity + 1 }
+                  : item
+              ),
+            };
+          } else {
+            // Add new item
+            return {
+              items: [...state.items, { ...product, quantity: 1 }],
+            };
+          }
+        });
       },
-      
       removeFromCart: (id) => {
-        set({ items: get().items.filter(i => i.id !== id) });
+        set((state) => ({
+          items: state.items.filter(item => item.id !== id),
+        }));
       },
-      
       updateQuantity: (id, quantity) => {
         if (quantity <= 0) {
           get().removeFromCart(id);
           return;
         }
-        set({
-          items: get().items.map(i =>
-            i.id === id ? { ...i, quantity } : i
-          )
-        });
+
+        set((state) => ({
+          items: state.items.map(item =>
+            item.id === id ? { ...item, quantity } : item
+          ),
+        }));
       },
-      
       clearCart: () => set({ items: [] }),
-      
-      get cartTotal() {
-        return get().items.reduce((total, item) => total + (item.price * item.quantity), 0);
+      getTotalPrice: () => {
+        return get().items.reduce((total, item) => total + item.price * item.quantity, 0);
       },
-      
-      get cartCount() {
+      getTotalItems: () => {
         return get().items.reduce((total, item) => total + item.quantity, 0);
-      }
+      },
     }),
     {
-      name: 'gladius-cart-storage',
+      name: 'cart-storage',
     }
   )
 );

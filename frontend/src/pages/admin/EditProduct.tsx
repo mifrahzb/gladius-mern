@@ -382,7 +382,7 @@ const EditProduct = () => {
                           alt="URL preview" 
                           className="w-full h-48 object-cover rounded-lg border-2 border-blue-500"
                           onError={(e) => {
-                            (e.target as HTMLImageElement).src = 'https://via.placeholder.com/200?text=Invalid+URL';
+                            (e.target as HTMLImageElement).src = 'data:image/svg+xml,%3Csvg xmlns="http://www.w3.org/2000/svg" width="400" height="300"%3E%3Crect fill="%23f0f0f0" width="400" height="300"/%3E%3Ctext fill="%23999" x="50%25" y="50%25" dominant-baseline="middle" text-anchor="middle" font-family="sans-serif" font-size="16"%3ENo Image%3C/text%3E%3C/svg%3E';
                           }}
                         />
                         <p className="text-xs text-blue-600 mt-2">

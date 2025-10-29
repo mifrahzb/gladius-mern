@@ -16,51 +16,66 @@ const Collections = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [knives, setKnives] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
 
-  const categories = [
-    { id: 'all', name: 'All Knives' },
-    { id: 'hunting', name: 'Hunting Knives' },
-    { id: 'chef', name: 'Chef Knives' },
-    { id: 'bushcraft', name: 'Bushcraft Knives' },
-    { id: 'skinner', name: 'Skinner Knives' },
-    { id: 'loveless', name: 'Loveless Knives' },
-    { id: 'chopper', name: 'Chopper Knives' },
-    { id: 'fillet', name: 'Fillet Knives' }
-  ];
+  // Fetch categories from backend
+  const fetchCategories = async () => {
+    try {
+      const response = await fetch('/api/categories');
+      const data = await response.json();
+      setCategories(data);
+    } catch (error) {
+      console.error('Failed to fetch categories:', error);
+    }
+  };
 
   // Fetch products from backend
   const fetchProducts = async () => {
     try {
       setLoading(true);
-      const params: any = {
-        category: selectedCategory !== 'all' ? selectedCategory : undefined,
-        keyword: searchQuery || undefined,
-        page: currentPage,
-        limit: 12
-      };
       
-      // Remove undefined parameters
-      Object.keys(params).forEach(key => {
-        if (params[key] === undefined) {
-          delete params[key];
+      // Build the API URL based on selected category
+      let apiUrl = '/api/products';
+      const params = new URLSearchParams();
+      
+      if (selectedCategory !== 'all') {
+        // Find the category by name to get its ID
+        const category = categories.find(cat => 
+          cat.name.toLowerCase() === selectedCategory.toLowerCase() || 
+          cat.slug === selectedCategory
+        );
+        if (category) {
+          params.append('category', category._id);
         }
-      });
+      }
       
-      const response = await productsApi.getAll(params);
+      if (searchQuery) {
+        params.append('keyword', searchQuery);
+      }
+      
+      params.append('page', currentPage.toString());
+      params.append('limit', '12');
+      
+      if (params.toString()) {
+        apiUrl += `?${params.toString()}`;
+      }
+      
+      const response = await fetch(apiUrl);
+      const data = await response.json();
       
       // Handle both response formats
-      const productsData = response.data?.products || response.data || [];
+      const productsData = data?.products || data || [];
       setKnives(Array.isArray(productsData) ? productsData : []);
       
       // Set pagination if available
-      if (response.data?.pages) {
-        setTotalPages(response.data.pages);
-      } else if (response.data?.totalPages) {
-        setTotalPages(response.data.totalPages);
+      if (data?.pages) {
+        setTotalPages(data.pages);
+      } else if (data?.totalPages) {
+        setTotalPages(data.totalPages);
       }
     } catch (error) {
       console.error('Failed to fetch products:', error);
@@ -75,16 +90,25 @@ const Collections = () => {
     }
   };
 
-  // Fetch on mount and when category/page changes
+  // Fetch categories on mount
   useEffect(() => {
-    fetchProducts();
-  }, [selectedCategory, currentPage]);
+    fetchCategories();
+  }, []);
+
+  // Fetch products when category, page, or categories change
+  useEffect(() => {
+    if (categories.length > 0 || selectedCategory === 'all') {
+      fetchProducts();
+    }
+  }, [selectedCategory, currentPage, categories]);
 
   // Debounced search
   useEffect(() => {
     const timer = setTimeout(() => {
-      setCurrentPage(1); // Reset to first page when searching
-      fetchProducts();
+      setCurrentPage(1);
+      if (categories.length > 0 || selectedCategory === 'all') {
+        fetchProducts();
+      }
     }, 500);
 
     return () => clearTimeout(timer);
@@ -92,13 +116,22 @@ const Collections = () => {
 
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
-    setCurrentPage(1); // Reset to first page when category changes
+    setCurrentPage(1);
   };
 
   const handlePageChange = (page: number) => {
     setCurrentPage(page);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
+
+  // Build categories for filter buttons
+  const categoryFilters = [
+    { id: 'all', name: 'All Knives' },
+    ...categories.map(cat => ({
+      id: cat.slug || cat.name.toLowerCase(),
+      name: `${cat.name} Knives`
+    }))
+  ];
 
   return (
     <div className="min-h-screen bg-background">
@@ -150,7 +183,7 @@ const Collections = () => {
         <div className="flex flex-col md:flex-row justify-between items-center mb-8 gap-4">
           {/* Category Filter */}
           <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-            {categories.map((category) => (
+            {categoryFilters.map((category) => (
               <Button
                 key={category.id}
                 variant={selectedCategory === category.id ? "cta" : "outline"}
@@ -211,18 +244,13 @@ const Collections = () => {
                   onClick={() => window.location.href = `/knife/${knife._id}`}
                 >
                   <div className="relative overflow-hidden rounded-t-lg">
-                    {knife.stock === 0 && (
+                    {knife.countInStock === 0 && (
                       <Badge className="absolute top-4 left-4 z-10 bg-red-500 text-white">
                         Out of Stock
                       </Badge>
                     )}
-                    {knife.featured && (
-                      <Badge className="absolute top-4 right-4 z-10 bg-green-500 text-white">
-                        Featured
-                      </Badge>
-                    )}
                     <img
-                      src={knife.images?.[0] || '/api/placeholder/400/300'}
+                      src={knife.image || '/api/placeholder/400/300'}
                       alt={knife.name}
                       className="w-full h-48 object-cover transition-premium group-hover:scale-105"
                     />
@@ -246,10 +274,10 @@ const Collections = () => {
                     <Button 
                       variant="steel" 
                       className="w-full group"
-                      disabled={knife.stock === 0}
+                      disabled={knife.countInStock === 0}
                     >
-                      {knife.stock > 0 ? 'View Details' : 'Out of Stock'}
-                      {knife.stock > 0 && <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />}
+                      {knife.countInStock > 0 ? 'View Details' : 'Out of Stock'}
+                      {knife.countInStock > 0 && <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />}
                     </Button>
                   </CardContent>
                 </Card>
@@ -295,7 +323,7 @@ const Collections = () => {
               <p className="text-muted-foreground">
                 Showing {knives.length} knives 
                 {searchQuery && ` for "${searchQuery}"`}
-                {selectedCategory !== 'all' && ` in ${categories.find(c => c.id === selectedCategory)?.name}`}
+                {selectedCategory !== 'all' && ` in ${categoryFilters.find(c => c.id === selectedCategory)?.name}`}
                 {totalPages > 1 && ` • Page ${currentPage} of ${totalPages}`}
               </p>
             </div>
