@@ -1,13 +1,32 @@
 import mongoose from 'mongoose';
 
-const categorySchema = mongoose.Schema(
-  {
-    name: { type: String, required: true, unique: true },
-    slug: { type: String, required: true, unique: true },
-    description: String
+export const categorySchema = new mongoose.Schema({
+  name: {
+    type: String,
+    required: true,
+    unique: true,
   },
-  { timestamps: true }
-);
+  description: {
+    type: String,
+  },
+  slug: {
+    type: String,
+    unique: true,
+  },
+}, {
+  timestamps: true,
+});
+
+categorySchema.pre('save', function(next) {
+  if (this.isModified('name')) {
+    this.slug = this.name
+      .toLowerCase()
+      .replace(/[^a-zA-Z0-9]/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
+  }
+  next();
+});
 
 const Category = mongoose.model('Category', categorySchema);
-export default Category;
+module.exports = Category;

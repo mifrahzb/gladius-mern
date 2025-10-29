@@ -39,7 +39,6 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
 
         const response = await axios.post('/api/upload/image', formData, {
           headers: {
-            'Content-Type': 'multipart/form-data',
             'Authorization': `Bearer ${localStorage.getItem('token')}`
           }
         });
