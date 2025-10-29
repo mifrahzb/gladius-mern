@@ -23,7 +23,7 @@ router.get('/slug/:slug', getProductBySlug);
 router.get('/:id', getProductById);
 
 // Admin routes with file upload middleware
-router.post('/', auth, admin, upload.single('image'), createProduct);
+router.post('/', auth, admin, createProduct);
 router.put('/:id', auth, admin, upload.single('image'), updateProduct);
 router.delete('/:id', auth, admin, deleteProduct);
 
