@@ -225,7 +225,7 @@ useEffect(() => {
   }
 
   const categoryName = knife.category?.name || 'Knives';
-  const categorySlug = knife.category?.slug || 'knives';
+  const categorySlugFromDB = knife.category?.slug || categorySlug;
 
   return (
     <div className="min-h-screen bg-background">
@@ -235,7 +235,7 @@ useEffect(() => {
         description={knife.metaDescription || knife.description}
         keywords={knife.metaKeywords || [knife.name, categoryName, 'handcrafted knife', 'Wazirabad', 'Pakistan']}
         image={getImageUrl(knife.images?.[0])}
-        url={`/product/${categorySlug}/${knife.slug}`}
+        url={`/product/${categorySlug}/${knife.slug}`} // ✅ Uses param from URL
         type="product"
         structuredData={getStructuredData()}
         canonicalUrl={knife.canonicalUrl}
@@ -246,8 +246,8 @@ useEffect(() => {
       <div className="container mx-auto px-4 py-8">
         {/* Breadcrumb Navigation */}
         <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
-          <Button variant="ghost" onClick={() => navigate('/')} className="p-0 h-auto hover:text-brown">
-            Home
+          <Button variant="ghost" onClick={() => navigate(`/knives/${categorySlug}`)} className="p-0 h-auto hover:text-brown">
+            {categoryName}
           </Button>
           <ArrowRight className="h-4 w-4" />
           <Button variant="ghost" onClick={() => navigate('/collections')} className="p-0 h-auto hover:text-brown">
