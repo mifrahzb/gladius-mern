@@ -29,12 +29,30 @@ api.interceptors.request.use(
 api.interceptors.response.use(
   (response) => response,
   (error) => {
-    if (error.response?.status === 401) {
-      // Token expired or invalid - redirect to login
+    // Only redirect to login on 401 if:
+    // 1. We have a token (user was logged in)
+    // 2. We're not already on a login/register page
+    // 3. We're not making a login/register request
+    const currentPath = window.location.pathname;
+    const isAuthRequest = error.config?.url?.includes('/auth/login') || 
+                          error.config?.url?.includes('/auth/register');
+    const isLoginPage = currentPath.includes('/login');
+    const token = localStorage.getItem('token');
+    
+    if (error.response?.status === 401 && token && !isAuthRequest && !isLoginPage) {
+      // Token expired or invalid - clear auth and redirect
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      window.location.href = '/admin/login';
+      
+      // Only redirect to admin login if we're in admin area
+      if (currentPath.includes('/admin')) {
+        window.location.href = '/admin/login';
+      } else {
+        // For regular users, redirect to user login
+        window.location.href = '/login';
+      }
     }
+    
     return Promise.reject(error);
   }
 );

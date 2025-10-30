@@ -31,9 +31,10 @@ const UserLogin = () => {
   const [registerLoading, setRegisterLoading] = useState(false);
   const [passwordError, setPasswordError] = useState('');
 
-  // Redirect if already logged in
+  // Simple redirect check - no useEffect
   if (isAuthenticated) {
-    navigate('/');
+    navigate('/', { replace: true });
+    return null; // Don't render anything during redirect
   }
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -42,10 +43,8 @@ const UserLogin = () => {
     
     try {
       await login(loginData.email, loginData.password);
-      // useAuth hook shows success toast
-      navigate('/'); // Redirect to home page
+      navigate('/', { replace: true });
     } catch (error) {
-      // Error is already handled by useAuth hook
       console.error('Login failed');
     } finally {
       setLoginLoading(false);
@@ -55,7 +54,6 @@ const UserLogin = () => {
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
     
-    // Validate passwords match
     if (registerData.password !== registerData.confirmPassword) {
       setPasswordError('Passwords do not match');
       return;
@@ -75,10 +73,8 @@ const UserLogin = () => {
         registerData.email,
         registerData.password
       );
-      // useAuth hook shows success toast
-      navigate('/'); // Redirect to home page
+      navigate('/', { replace: true });
     } catch (error) {
-      // Error is already handled by useAuth hook
       console.error('Registration failed');
     } finally {
       setRegisterLoading(false);

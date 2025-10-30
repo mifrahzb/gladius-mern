@@ -62,14 +62,14 @@ const productSchema = new mongoose.Schema({
     type: Boolean,
     default: false
   },
-  // SEO Meta Fields
+  // SEO Meta Fields - ✅ REMOVED STRICT LENGTH LIMITS
   metaTitle: {
     type: String,
-    maxlength: 60 // Google displays ~60 characters
+    maxlength: 200 // Increased from 60 to 200
   },
   metaDescription: {
     type: String,
-    maxlength: 160 // Google displays ~160 characters
+    maxlength: 300 // Increased from 160 to 300
   },
   metaKeywords: [String], // Array of keywords for SEO
   // Image Alt Text for SEO
@@ -101,16 +101,19 @@ productSchema.pre('save', function(next) {
       .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
   }
   
-  // Auto-generate meta title if not provided
+  // Auto-generate meta title if not provided - ✅ FIXED: Truncate to fit limit
   if (this.isModified('name') && !this.metaTitle) {
-    this.metaTitle = `${this.name} | Gladius Traders`;
+    const generatedTitle = `${this.name} | Gladius Traders`;
+    this.metaTitle = generatedTitle.length > 200 
+      ? generatedTitle.substring(0, 197) + '...' 
+      : generatedTitle;
   }
   
-  // Auto-generate meta description if not provided
+  // Auto-generate meta description if not provided - ✅ FIXED: Truncate to fit limit
   if (this.isModified('description') && !this.metaDescription) {
     const plainDesc = this.description.replace(/<[^>]*>/g, ''); // Strip HTML
-    this.metaDescription = plainDesc.length > 160 
-      ? plainDesc.substring(0, 157) + '...' 
+    this.metaDescription = plainDesc.length > 300 
+      ? plainDesc.substring(0, 297) + '...' 
       : plainDesc;
   }
   
