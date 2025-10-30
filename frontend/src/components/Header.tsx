@@ -9,8 +9,9 @@ import gladiusLogo from '@/assets/gladius-logo.png';
 import { useCart } from '@/hooks/useCart';
 
 const Header = () => {
-  const { cartCount } = useCart();
+  const { items } = useCart();
   const navigate = useNavigate();
+  const cartCount = items.length;
 
   const navItems = [
     { name: 'Home', href: '/' },

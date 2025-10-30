@@ -226,7 +226,8 @@ const Search = () => {
                             name: product.name,
                             price: product.price,
                             image: product.images?.[0] || '',
-                            category: product.category
+                            category: product.category?.name || 'Knife',
+                            countInStock: product.countInStock || 0
                           })}
                         >
                           Add to Cart
