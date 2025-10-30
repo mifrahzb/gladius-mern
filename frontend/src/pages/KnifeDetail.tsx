@@ -1,19 +1,24 @@
 import { useState, useEffect } from 'react';
-import { useParams } from 'react-router-dom';
+import { useParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ArrowRight } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { productsApi, reviewsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { ProductReviews } from '@/components/ProductReviews';
 import { useWishlist } from '@/context/WishlistContext';
+import SEO from '@/components/SEO';
+import Header from '@/components/Header';
+import Footer from '@/components/Footer';
 
 const KnifeDetail = () => {
   const { id } = useParams();
+  const { categorySlug, productSlug } = useParams();
+  const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(0);
   const [quantity, setQuantity] = useState(1);
   const [knife, setKnife] = useState<any>(null);
@@ -26,6 +31,23 @@ const KnifeDetail = () => {
 
   const inWishlist = knife ? isInWishlist(knife._id) : false;
 
+  const renderRating = (rating: number) => {
+    return (
+      <div className="flex items-center">
+        {[1, 2, 3, 4, 5].map((star) => (
+          <Star
+            key={star}
+            className={`h-5 w-5 ${
+              star <= rating 
+                ? 'text-yellow-400 fill-yellow-400' 
+                : 'text-gray-300'
+            }`}
+          />
+        ))}
+      </div>
+    );
+  };
+  
   useEffect(() => {
     if (id) {
       fetchProductDetails();
@@ -34,29 +56,57 @@ const KnifeDetail = () => {
   }, [id]);
 
   const fetchProductDetails = async () => {
-    setLoading(true);
-    try {
-      const response = await productsApi.getById(id!);
-      setKnife(response.data);
-    } catch (error: any) {
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: 'Failed to load product details',
-      });
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    console.log('🔍 Fetching:', categorySlug, productSlug);
+    
+    const response = await fetch(`/api/products/${categorySlug}/${productSlug}`);
+    
+    if (!response.ok) {
+      throw new Error('Product not found');
     }
-  };
+    
+    const data = await response.json();
+    console.log('✅ Product loaded:', data.name);
+    setKnife(data);
+  } catch (error) {
+    console.error('❌ Error loading product:', error);
+    toast({
+      variant: 'destructive',
+      title: 'Error',
+      description: 'Product not found',
+    });
+    navigate('/collections');
+  } finally {
+    setLoading(false);
+  }
+};
 
-  const fetchReviews = async () => {
-    try {
-      const response = await reviewsApi.getByProduct(id!);
-      setReviews(response.data);
-    } catch (error) {
-      console.error('Failed to load reviews');
-    }
-  };
+const fetchReviews = async () => {
+  try {
+    if (!knife?._id) return;
+    
+    const response = await reviewsApi.getByProduct(knife._id);
+    const reviewsData = response.data?.reviews || response.data || [];
+    setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+  } catch (error) {
+    // 401 error is OK - user not logged in
+    console.log('Reviews not available (not logged in)');
+    setReviews([]);
+  }
+};
+
+useEffect(() => {
+  if (categorySlug && productSlug) {
+    fetchProductDetails();
+  }
+}, [categorySlug, productSlug]);
+
+useEffect(() => {
+  if (knife?._id) {
+    fetchReviews();
+  }
+}, [knife?._id]);
 
   const handleWishlist = async () => {
     if (!user) {
@@ -85,53 +135,164 @@ const KnifeDetail = () => {
     }
   };
 
+  // Get image URL helper
+  const getImageUrl = (img: any) => {
+    if (typeof img === 'string') return img;
+    if (img?.url) return img.url;
+    return '/placeholder-knife.jpg';
+  };
+
+  // Get image alt text
+  const getImageAlt = (index: number = 0) => {
+    if (!knife) return '';
+    
+    // Check if there's a custom alt text
+    if (knife.imageAlts?.[index]?.altText) {
+      return knife.imageAlts[index].altText;
+    }
+    
+    // Generate SEO-friendly alt text
+    const categoryName = knife.category?.name || 'Knife';
+    if (index === 0) {
+      return `${knife.name} - Handcrafted ${categoryName} from Wazirabad, Pakistan`;
+    }
+    return `${knife.name} ${categoryName} - View ${index + 1}`;
+  };
+
+  // Generate structured data for SEO
+  const getStructuredData = () => {
+    if (!knife) return null;
+
+    return {
+      "@context": "https://schema.org/",
+      "@type": "Product",
+      "name": knife.name,
+      "image": knife.images?.map((img: any) => getImageUrl(img)) || [],
+      "description": knife.description,
+      "sku": knife._id,
+      "brand": {
+        "@type": "Brand",
+        "name": knife.brand || "Gladius Traders"
+      },
+      "offers": {
+        "@type": "Offer",
+        "url": window.location.href,
+        "priceCurrency": "USD",
+        "price": knife.price,
+        "availability": knife.countInStock > 0 
+          ? "https://schema.org/InStock" 
+          : "https://schema.org/OutOfStock",
+        "itemCondition": "https://schema.org/NewCondition"
+      },
+      "aggregateRating": knife.rating > 0 ? {
+        "@type": "AggregateRating",
+        "ratingValue": knife.rating,
+        "reviewCount": knife.numReviews
+      } : undefined
+    };
+  };
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Loading product...</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brown mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading product...</p>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
 
   if (!knife) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <p className="text-muted-foreground">Product not found</p>
+      <div className="min-h-screen bg-background">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <div className="text-center">
+            <h2 className="text-2xl font-bold mb-4">Product Not Found</h2>
+            <Button onClick={() => navigate('/collections')}>
+              Back to Collections
+            </Button>
+          </div>
+        </div>
+        <Footer />
       </div>
     );
   }
 
+  const categoryName = knife.category?.name || 'Knives';
+  const categorySlug = knife.category?.slug || 'knives';
+
   return (
     <div className="min-h-screen bg-background">
+      {/* SEO Component */}
+      <SEO
+        title={knife.metaTitle || `${knife.name} - Handcrafted ${categoryName}`}
+        description={knife.metaDescription || knife.description}
+        keywords={knife.metaKeywords || [knife.name, categoryName, 'handcrafted knife', 'Wazirabad', 'Pakistan']}
+        image={getImageUrl(knife.images?.[0])}
+        url={`/product/${categorySlug}/${knife.slug}`}
+        type="product"
+        structuredData={getStructuredData()}
+        canonicalUrl={knife.canonicalUrl}
+      />
+
+      <Header />
+      
       <div className="container mx-auto px-4 py-8">
+        {/* Breadcrumb Navigation */}
+        <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
+          <Button variant="ghost" onClick={() => navigate('/')} className="p-0 h-auto hover:text-brown">
+            Home
+          </Button>
+          <ArrowRight className="h-4 w-4" />
+          <Button variant="ghost" onClick={() => navigate('/collections')} className="p-0 h-auto hover:text-brown">
+            Collections
+          </Button>
+          <ArrowRight className="h-4 w-4" />
+          <Button variant="ghost" onClick={() => navigate(`/knives/${categorySlug}`)} className="p-0 h-auto hover:text-brown">
+            {categoryName}
+          </Button>
+          <ArrowRight className="h-4 w-4" />
+          <span className="text-foreground font-medium">{knife.name}</span>
+        </nav>
+
         <div className="grid lg:grid-cols-2 gap-12">
           {/* Product Images */}
           <div className="space-y-4">
             {/* Main Image */}
             <div className="aspect-square overflow-hidden rounded-lg bg-gray-100">
               <img
-                src={
-                  typeof knife.images?.[0] === 'string'
-                    ? knife.images[0]
-                    : knife.images?.[0]?.url || '/placeholder-knife.jpg'
-                }
-                alt={knife.name}
+                src={getImageUrl(knife.images?.[selectedImage])}
+                alt={getImageAlt(selectedImage)}
                 className="h-full w-full object-cover object-center"
+                loading="eager"
               />
             </div>
   
             {/* Thumbnail Gallery */}
             {knife.images && knife.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
-                {knife.images.map((img, idx) => (
-                  <div key={idx} className="aspect-square overflow-hidden rounded-md cursor-pointer hover:opacity-75">
+                {knife.images.map((img: any, idx: number) => (
+                  <button
+                    key={idx}
+                    className={`aspect-square overflow-hidden rounded-md cursor-pointer border-2 transition-all ${
+                      selectedImage === idx ? 'border-brown' : 'border-transparent hover:border-gray-300'
+                    }`}
+                    onClick={() => setSelectedImage(idx)}
+                    aria-label={`View image ${idx + 1} of ${knife.name}`}
+                  >
                     <img
-                      src={typeof img === 'string' ? img : img.url}
-                      alt={`${knife.name} view ${idx + 1}`}
+                      src={getImageUrl(img)}
+                      alt={getImageAlt(idx)}
                       className="h-full w-full object-cover"
-                      onClick={() => setSelectedImage(idx)}
+                      loading="lazy"
                     />
-                  </div>
+                  </button>
                 ))}
               </div>
             )}
@@ -140,20 +301,15 @@ const KnifeDetail = () => {
           {/* Product Info */}
           <div className="space-y-6">
             <div>
-              <Badge className="mb-2">{knife.category}</Badge>
+              <Badge className="mb-2">{categoryName}</Badge>
               <h1 className="text-3xl font-bold text-foreground mb-2">{knife.name}</h1>
               
               {knife.rating && (
                 <div className="flex items-center space-x-2 mb-4">
-                  <div className="flex">
-                    {[...Array(5)].map((_, i) => (
-                      <Star 
-                        key={i} 
-                        className={`h-4 w-4 ${i < Math.floor(knife.rating) ? 'fill-brown text-brown' : 'text-gray-300'}`} 
-                      />
-                    ))}
+                  <div className="flex" aria-label={`Rating: ${knife.rating} out of 5 stars`}>
+                    {renderRating(knife.rating)}
                   </div>
-                  <span className="font-medium">{knife.rating}</span>
+                  <span className="font-medium">{knife.rating.toFixed(1)}</span>
                   <span className="text-muted-foreground">({reviews.length} reviews)</span>
                 </div>
               )}
@@ -164,14 +320,14 @@ const KnifeDetail = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              {knife.stock > 0 ? (
+              {knife.countInStock > 0 ? (
                 <>
-                  <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-green-600">In Stock ({knife.stock} available)</span>
+                  <div className="w-2 h-2 bg-green-500 rounded-full" aria-hidden="true"></div>
+                  <span className="text-green-600">In Stock ({knife.countInStock} available)</span>
                 </>
               ) : (
                 <>
-                  <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+                  <div className="w-2 h-2 bg-red-500 rounded-full" aria-hidden="true"></div>
                   <span className="text-red-600">Out of Stock</span>
                 </>
               )}
@@ -179,18 +335,20 @@ const KnifeDetail = () => {
 
             <div className="space-y-4">
               <div className="flex items-center space-x-4">
-                <label className="font-medium">Quantity:</label>
+                <label htmlFor="quantity" className="font-medium">Quantity:</label>
                 <div className="flex items-center border border-border rounded-lg">
                   <button 
                     onClick={() => setQuantity(Math.max(1, quantity - 1))}
                     className="px-3 py-2 hover:bg-secondary"
+                    aria-label="Decrease quantity"
                   >
                     -
                   </button>
-                  <span className="px-4 py-2 border-x border-border">{quantity}</span>
+                  <span id="quantity" className="px-4 py-2 border-x border-border">{quantity}</span>
                   <button 
-                    onClick={() => setQuantity(Math.min(knife.stock, quantity + 1))}
+                    onClick={() => setQuantity(Math.min(knife.countInStock, quantity + 1))}
                     className="px-3 py-2 hover:bg-secondary"
+                    aria-label="Increase quantity"
                   >
                     +
                   </button>
@@ -202,27 +360,40 @@ const KnifeDetail = () => {
                   variant="cta" 
                   size="lg" 
                   className="flex-1"
-                  disabled={knife.stock === 0}
+                  disabled={knife.countInStock === 0}
                   onClick={() => addToCart({
                     id: knife._id,
                     name: knife.name,
                     price: knife.price,
-                    image: knife.images?.[0] || '',
-                    category: knife.category
+                    image: getImageUrl(knife.images?.[0]),
+                    category: categoryName,
+                    countInStock: knife.countInStock
                   })}
                 >
                   <ShoppingCart className="mr-2 h-5 w-5" />
-                  Add to Cart - ${knife.price * quantity}
+                  Add to Cart - ${(knife.price * quantity).toFixed(2)}
                 </Button>
                 <Button 
                   variant="outline" 
                   size="lg"
                   onClick={handleWishlist}
                   className={inWishlist ? 'text-red-500' : ''}
+                  aria-label={inWishlist ? 'Remove from wishlist' : 'Add to wishlist'}
                 >
                   <Heart className={`h-5 w-5 ${inWishlist ? 'fill-current' : ''}`} />
                 </Button>
-                <Button variant="outline" size="lg">
+                <Button 
+                  variant="outline" 
+                  size="lg"
+                  onClick={() => {
+                    navigator.share?.({
+                      title: knife.name,
+                      text: knife.metaDescription || knife.description,
+                      url: window.location.href
+                    });
+                  }}
+                  aria-label="Share product"
+                >
                   <Share2 className="h-5 w-5" />
                 </Button>
               </div>
@@ -230,17 +401,17 @@ const KnifeDetail = () => {
 
             <div className="grid grid-cols-3 gap-4 pt-6 border-t border-border">
               <div className="text-center">
-                <Truck className="h-6 w-6 text-brown mx-auto mb-2" />
+                <Truck className="h-6 w-6 text-brown mx-auto mb-2" aria-hidden="true" />
                 <div className="text-sm font-medium">Free Shipping</div>
                 <div className="text-xs text-muted-foreground">Orders over $150</div>
               </div>
               <div className="text-center">
-                <Shield className="h-6 w-6 text-brown mx-auto mb-2" />
+                <Shield className="h-6 w-6 text-brown mx-auto mb-2" aria-hidden="true" />
                 <div className="text-sm font-medium">Authentic</div>
                 <div className="text-xs text-muted-foreground">Handmade guarantee</div>
               </div>
               <div className="text-center">
-                <RotateCcw className="h-6 w-6 text-brown mx-auto mb-2" />
+                <RotateCcw className="h-6 w-6 text-brown mx-auto mb-2" aria-hidden="true" />
                 <div className="text-sm font-medium">30-Day Returns</div>
                 <div className="text-xs text-muted-foreground">Easy returns</div>
               </div>
@@ -260,9 +431,17 @@ const KnifeDetail = () => {
             <TabsContent value="description" className="mt-8">
               <Card>
                 <CardContent className="p-6">
-                  <p className="text-muted-foreground leading-relaxed">
-                    {knife.description}
-                  </p>
+                  {/* Use rich description if available, otherwise plain description */}
+                  {knife.richDescription ? (
+                    <div 
+                      className="prose max-w-none text-muted-foreground"
+                      dangerouslySetInnerHTML={{ __html: knife.richDescription }}
+                    />
+                  ) : (
+                    <p className="text-muted-foreground leading-relaxed">
+                      {knife.description}
+                    </p>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
@@ -272,10 +451,14 @@ const KnifeDetail = () => {
                 <CardContent className="p-6">
                   <div className="grid md:grid-cols-2 gap-4">
                     {knife.specifications && Object.entries(knife.specifications).map(([key, value]: [string, any]) => (
-                      <div key={key} className="flex justify-between py-2 border-b border-border">
-                        <span className="font-medium text-foreground">{key}:</span>
-                        <span className="text-muted-foreground">{value}</span>
-                      </div>
+                      value && (
+                        <div key={key} className="flex justify-between py-2 border-b border-border">
+                          <span className="font-medium text-foreground capitalize">
+                            {key.replace(/([A-Z])/g, ' $1').trim()}:
+                          </span>
+                          <span className="text-muted-foreground">{value}</span>
+                        </div>
+                      )
                     ))}
                   </div>
                 </CardContent>
@@ -285,31 +468,26 @@ const KnifeDetail = () => {
             <TabsContent value="reviews" className="mt-8">
               <div className="space-y-6">
                 <ProductReviews productId={id!} />
-                {reviews.length === 0 ? (
+                {!reviews || reviews.length === 0 ? (
                   <Card>
                     <CardContent className="p-6 text-center text-muted-foreground">
                       No reviews yet. Be the first to review this product!
                     </CardContent>
                   </Card>
                 ) : (
-                  reviews.map((review: any) => (
+                  Array.isArray(reviews) && reviews.map((review: any) => (
                     <Card key={review._id}>
                       <CardContent className="p-6">
                         <div className="flex items-center justify-between mb-4">
                           <div>
-                            <div className="font-medium text-foreground">{review.user?.name || 'Anonymous'}</div>
-                            <div className="text-sm text-muted-foreground">
-                              {new Date(review.createdAt).toLocaleDateString()}
+                            <div className="flex items-center mb-1">
+                              {renderRating(review.rating)}
                             </div>
+                            <p className="font-medium">{review.user?.name || 'Anonymous'}</p>
                           </div>
-                          <div className="flex">
-                            {[...Array(5)].map((_, i) => (
-                              <Star 
-                                key={i} 
-                                className={`h-4 w-4 ${i < review.rating ? 'fill-brown text-brown' : 'text-gray-300'}`} 
-                              />
-                            ))}
-                          </div>
+                          <time className="text-sm text-muted-foreground" dateTime={review.createdAt}>
+                            {new Date(review.createdAt).toLocaleDateString()}
+                          </time>
                         </div>
                         <p className="text-muted-foreground">{review.comment}</p>
                       </CardContent>
@@ -321,6 +499,8 @@ const KnifeDetail = () => {
           </Tabs>
         </div>
       </div>
+      
+      <Footer />
     </div>
   );
 };

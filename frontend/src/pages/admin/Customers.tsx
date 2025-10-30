@@ -4,75 +4,62 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Search, Eye, Mail, Star, Trash2, CheckCircle, XCircle } from 'lucide-react';
-import { toast } from '@/hooks/use-toast';
+import { Search, Eye, Mail, Star, Trash2, MessageSquare } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useToast } from '@/hooks/use-toast';
 
 interface Customer {
-  id: string;
+  _id: string;
   name: string;
   email: string;
   totalOrders: number;
-  totalSpent: number;
+  totalSpent: string;
   joinDate: string;
-  status: string;
+  reviews: Review[];
 }
 
 interface Review {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  productName: string;
+  _id: string;
+  product: {
+    _id: string;
+    name: string;
+  };
   rating: number;
   comment: string;
-  date: string;
-  status: 'pending' | 'approved' | 'rejected';
+  createdAt: string;
+  verified: boolean;
 }
 
 const Customers = () => {
   const [searchQuery, setSearchQuery] = useState('');
-  const [reviews, setReviews] = useState<Review[]>([]);
-  
   const [customers, setCustomers] = useState<Customer[]>([]);
+  const [allReviews, setAllReviews] = useState<Review[]>([]);
+  const [loading, setLoading] = useState(true);
+  const { toast } = useToast();
 
   useEffect(() => {
-    loadReviews();
-    loadCustomers();
+    fetchCustomers();
+    fetchReviews();
   }, []);
 
-  const loadReviews = () => {
-    const savedReviews = localStorage.getItem('admin_reviews');
-    if (savedReviews) {
-      setReviews(JSON.parse(savedReviews));
+  const fetchCustomers = async () => {
+    try {
+      const response = await api.get('/dashboard/customers');
+      setCustomers(response.data.customers || []);
+    } catch (error) {
+      console.error('Failed to fetch customers:', error);
+    } finally {
+      setLoading(false);
     }
   };
 
-  const loadCustomers = () => {
-    const savedCustomers = localStorage.getItem('admin_customers');
-    if (savedCustomers) {
-      setCustomers(JSON.parse(savedCustomers));
+  const fetchReviews = async () => {
+    try {
+      const response = await api.get('/dashboard/reviews');
+      setAllReviews(response.data.reviews || []);
+    } catch (error) {
+      console.error('Failed to fetch reviews:', error);
     }
-  };
-
-  const updateReviewStatus = (reviewId: string, status: 'approved' | 'rejected') => {
-    const updatedReviews = reviews.map(review =>
-      review.id === reviewId ? { ...review, status } : review
-    );
-    localStorage.setItem('admin_reviews', JSON.stringify(updatedReviews));
-    setReviews(updatedReviews);
-    toast({
-      title: `Review ${status}`,
-      description: `The review has been ${status}.`,
-    });
-  };
-
-  const deleteReview = (reviewId: string) => {
-    const updatedReviews = reviews.filter(review => review.id !== reviewId);
-    localStorage.setItem('admin_reviews', JSON.stringify(updatedReviews));
-    setReviews(updatedReviews);
-    toast({
-      title: "Review deleted",
-      description: "The review has been permanently removed.",
-    });
   };
 
   const renderStars = (rating: number) => {
@@ -84,23 +71,36 @@ const Customers = () => {
     ));
   };
 
+  const filteredCustomers = customers.filter(customer =>
+    customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    customer.email.toLowerCase().includes(searchQuery.toLowerCase())
+  );
+
+  if (loading) {
+    return (
+      <div className="p-8">
+        <div className="text-center py-12">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brown mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading customers...</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="p-8">
       <div className="mb-8">
         <h1 className="text-3xl font-bold mb-2">Customers & Reviews</h1>
-        <p className="text-muted-foreground">Manage customer relationships and moderate reviews</p>
+        <p className="text-muted-foreground">Manage customer relationships and reviews</p>
       </div>
 
       <Tabs defaultValue="customers" className="space-y-6">
         <TabsList>
-          <TabsTrigger value="customers">Customers</TabsTrigger>
+          <TabsTrigger value="customers">
+            Customers ({customers.length})
+          </TabsTrigger>
           <TabsTrigger value="reviews">
-            Reviews
-            {reviews.filter(r => r.status === 'pending').length > 0 && (
-              <Badge variant="destructive" className="ml-2">
-                {reviews.filter(r => r.status === 'pending').length}
-              </Badge>
-            )}
+            All Reviews ({allReviews.length})
           </TabsTrigger>
         </TabsList>
 
@@ -118,142 +118,106 @@ const Customers = () => {
             </div>
           </div>
 
-          {customers.length === 0 ? (
+          {filteredCustomers.length === 0 ? (
             <Card>
               <CardContent className="p-8 text-center text-muted-foreground">
-                No customers yet. Customer data will appear here when users create accounts.
+                {searchQuery ? 'No customers found' : 'No customers yet'}
               </CardContent>
             </Card>
           ) : (
-            <Card>
-              <CardContent className="p-0">
-                <div className="overflow-x-auto">
-                  <table className="w-full">
-                    <thead className="bg-muted/50 border-b">
-                      <tr>
-                        <th className="text-left p-4 font-semibold">Customer</th>
-                        <th className="text-left p-4 font-semibold">Total Orders</th>
-                        <th className="text-left p-4 font-semibold">Total Spent</th>
-                        <th className="text-left p-4 font-semibold">Join Date</th>
-                        <th className="text-left p-4 font-semibold">Status</th>
-                        <th className="text-left p-4 font-semibold">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {customers
-                        .filter(customer => 
-                          customer.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                          customer.email.toLowerCase().includes(searchQuery.toLowerCase())
-                        )
-                        .map((customer) => (
-                        <tr key={customer.id} className="border-b hover:bg-muted/30">
-                          <td className="p-4">
-                            <div>
-                              <p className="font-semibold">{customer.name}</p>
-                              <p className="text-sm text-muted-foreground">{customer.email}</p>
+            <div className="space-y-4">
+              {filteredCustomers.map((customer) => (
+                <Card key={customer._id}>
+                  <CardHeader>
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <CardTitle>{customer.name}</CardTitle>
+                        <p className="text-sm text-muted-foreground">{customer.email}</p>
+                      </div>
+                      <Badge variant="outline" className="bg-green-100 text-green-800">
+                        Active
+                      </Badge>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-3 gap-4 mb-4">
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Orders</p>
+                        <p className="text-lg font-semibold">{customer.totalOrders}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Total Spent</p>
+                        <p className="text-lg font-semibold">${customer.totalSpent}</p>
+                      </div>
+                      <div>
+                        <p className="text-sm text-muted-foreground">Reviews</p>
+                        <p className="text-lg font-semibold">{customer.reviews?.length || 0}</p>
+                      </div>
+                    </div>
+
+                    {/* Customer Reviews */}
+                    {customer.reviews && customer.reviews.length > 0 && (
+                      <div className="border-t pt-4">
+                        <h4 className="font-semibold mb-3">Recent Reviews</h4>
+                        <div className="space-y-3">
+                          {customer.reviews.slice(0, 3).map((review) => (
+                            <div key={review._id} className="bg-muted/30 p-3 rounded">
+                              <div className="flex items-center justify-between mb-2">
+                                <p className="text-sm font-medium">{review.product.name}</p>
+                                <div className="flex">{renderStars(review.rating)}</div>
+                              </div>
+                              <p className="text-sm text-muted-foreground">{review.comment}</p>
+                              <p className="text-xs text-muted-foreground mt-2">
+                                {new Date(review.createdAt).toLocaleDateString()}
+                              </p>
                             </div>
-                          </td>
-                          <td className="p-4 font-semibold">{customer.totalOrders}</td>
-                          <td className="p-4 font-semibold">${customer.totalSpent}</td>
-                          <td className="p-4 text-muted-foreground">{customer.joinDate}</td>
-                          <td className="p-4">
-                            <Badge variant="outline" className="bg-green-100 text-green-800 border-green-300">
-                              {customer.status}
-                            </Badge>
-                          </td>
-                          <td className="p-4">
-                            <div className="flex gap-2">
-                              <Button variant="outline" size="sm">
-                                <Eye className="w-3 h-3 mr-1" />
-                                View
-                              </Button>
-                              <Button variant="outline" size="sm">
-                                <Mail className="w-3 h-3 mr-1" />
-                                Email
-                              </Button>
-                            </div>
-                          </td>
-                        </tr>
-                      ))}
-                    </tbody>
-                  </table>
-                </div>
-              </CardContent>
-            </Card>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
           )}
         </TabsContent>
 
         <TabsContent value="reviews">
-          <div className="grid gap-6">
-            {reviews.length === 0 ? (
+          <div className="space-y-4">
+            {allReviews.length === 0 ? (
               <Card>
-                <CardContent className="p-8 text-center text-muted-foreground">
-                  No reviews yet. Customer reviews will appear here for moderation.
+                <CardContent className="p-8 text-center">
+                  <MessageSquare className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
+                  <p className="text-muted-foreground">No reviews yet</p>
                 </CardContent>
               </Card>
             ) : (
-              reviews.map((review) => (
-                <Card key={review.id}>
+              allReviews.map((review: any) => (
+                <Card key={review._id}>
                   <CardHeader>
                     <div className="flex items-start justify-between">
                       <div>
-                        <CardTitle className="text-lg">{review.productName}</CardTitle>
+                        <CardTitle className="text-lg">{review.product.name}</CardTitle>
                         <div className="flex items-center gap-2 mt-2">
                           <div className="flex">{renderStars(review.rating)}</div>
-                          <Badge 
-                            variant="outline" 
-                            className={
-                              review.status === 'approved' 
-                                ? 'bg-green-100 text-green-800 border-green-300'
-                                : review.status === 'rejected'
-                                ? 'bg-red-100 text-red-800 border-red-300'
-                                : 'bg-yellow-100 text-yellow-800 border-yellow-300'
-                            }
-                          >
-                            {review.status}
-                          </Badge>
+                          {review.verified && (
+                            <Badge variant="outline" className="bg-blue-100 text-blue-800">
+                              Verified Purchase
+                            </Badge>
+                          )}
                         </div>
                       </div>
-                      <span className="text-sm text-muted-foreground">{review.date}</span>
+                      <span className="text-sm text-muted-foreground">
+                        {new Date(review.createdAt).toLocaleDateString()}
+                      </span>
                     </div>
                   </CardHeader>
                   <CardContent>
                     <div className="mb-4">
-                      <p className="font-semibold">{review.customerName}</p>
-                      <p className="text-sm text-muted-foreground">{review.customerEmail}</p>
+                      <p className="font-semibold">{review.user?.name}</p>
+                      <p className="text-sm text-muted-foreground">{review.user?.email}</p>
                     </div>
-                    <p className="text-muted-foreground mb-4">{review.comment}</p>
-                    <div className="flex gap-2">
-                      {review.status === 'pending' && (
-                        <>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => updateReviewStatus(review.id, 'approved')}
-                          >
-                            <CheckCircle className="w-3 h-3 mr-1" />
-                            Approve
-                          </Button>
-                          <Button 
-                            variant="outline" 
-                            size="sm"
-                            onClick={() => updateReviewStatus(review.id, 'rejected')}
-                          >
-                            <XCircle className="w-3 h-3 mr-1" />
-                            Reject
-                          </Button>
-                        </>
-                      )}
-                      <Button 
-                        variant="outline" 
-                        size="sm" 
-                        className="text-destructive"
-                        onClick={() => deleteReview(review.id)}
-                      >
-                        <Trash2 className="w-3 h-3 mr-1" />
-                        Delete
-                      </Button>
-                    </div>
+                    <p className="text-muted-foreground">{review.comment}</p>
                   </CardContent>
                 </Card>
               ))

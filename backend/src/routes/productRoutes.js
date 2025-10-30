@@ -2,9 +2,9 @@ import express from 'express';
 import {
   getProducts, 
   getProductById, 
-  getProductBySlug, 
+  getProductBySlug,
+  getProductByCategoryAndSlug, // New SEO-friendly route
   getFeatured, 
-  getCategories,
   createProduct, 
   updateProduct, 
   deleteProduct
@@ -18,7 +18,11 @@ const router = express.Router();
 // Public routes
 router.get('/', getProducts);
 router.get('/featured', getFeatured);
-router.get('/categories', getCategories);
+
+// SEO-friendly route: /api/products/category-slug/product-slug
+router.get('/:categorySlug/:productSlug', getProductByCategoryAndSlug);
+
+// Keep old routes for backward compatibility
 router.get('/slug/:slug', getProductBySlug);
 router.get('/:id', getProductById);
 

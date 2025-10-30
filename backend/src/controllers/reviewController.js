@@ -31,7 +31,7 @@ export const createReview = async (req, res) => {
     const hasPurchased = await Order.findOne({
       user: req.user._id,
       'orderItems.product': productId,
-      status: 'delivered'
+      isDelivered: true
     });
 
     const review = await Review.create({
@@ -41,6 +41,9 @@ export const createReview = async (req, res) => {
       comment,
       verified: !!hasPurchased
     });
+
+    // Populate user info for response
+    await review.populate('user', 'name');
 
     // Update product rating
     await updateProductRating(productId);
@@ -61,6 +64,22 @@ export const getProductReviews = async (req, res) => {
   try {
     const reviews = await Review.find({ product: req.params.productId })
       .populate('user', 'name')
+      .sort({ createdAt: -1 });
+
+    res.json({ reviews });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+// @desc    Get all reviews (Admin)
+// @route   GET /api/reviews
+// @access  Private/Admin
+export const getAllReviews = async (req, res) => {
+  try {
+    const reviews = await Review.find({})
+      .populate('user', 'name email')
+      .populate('product', 'name')
       .sort({ createdAt: -1 });
 
     res.json({ reviews });
@@ -95,7 +114,7 @@ export const deleteReview = async (req, res) => {
     }
 
     // Only review owner or admin can delete
-    if (review.user.toString() !== req.user._id.toString() && !req.user.isAdmin) {
+    if (review.user.toString() !== req.user._id.toString() && req.user.role !== 'admin') {
       return res.status(403).json({ message: 'Not authorized' });
     }
 

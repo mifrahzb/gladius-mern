@@ -10,6 +10,7 @@ import { Search as SearchIcon, ArrowRight, Filter } from 'lucide-react';
 import { productsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/hooks/useCart';
+import { useNavigate } from 'react-router-dom';
 
 const Search = () => {
   const [searchParams, setSearchParams] = useSearchParams();
@@ -19,6 +20,7 @@ const Search = () => {
   const [category, setCategory] = useState('all');
   const { toast } = useToast();
   const { addToCart } = useCart();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const query = searchParams.get('q');
@@ -173,7 +175,8 @@ const Search = () => {
                         src={product.images?.[0] || '/api/placeholder/400/300'}
                         alt={product.name}
                         className="w-full h-56 object-cover transition-transform group-hover:scale-105"
-                        onClick={() => window.location.href = `/knife/${product._id}`}
+                        // ✅ Update onClick handler
+                        onClick={() => navigate(`/product/${product.category?.slug || 'knives'}/${product.slug}`)}
                       />
                     </div>
                     
@@ -183,7 +186,8 @@ const Search = () => {
                       </Badge>
                       <h3 
                         className="text-lg font-bold text-foreground mb-2 hover:text-brown cursor-pointer"
-                        onClick={() => window.location.href = `/knife/${product._id}`}
+                        // ✅ Update onClick handler
+                        onClick={() => navigate(`/product/${product.category?.slug || 'knives'}/${product.slug}`)}
                       >
                         {product.name}
                       </h3>
@@ -208,7 +212,8 @@ const Search = () => {
                         <Button 
                           variant="default" 
                           className="flex-1"
-                          onClick={() => window.location.href = `/knife/${product._id}`}
+                          // ✅ Update onClick handler
+                          onClick={() => navigate(`/product/${product.category?.slug || 'knives'}/${product.slug}`)}
                         >
                           View Details
                           <ArrowRight className="ml-2 h-4 w-4" />
