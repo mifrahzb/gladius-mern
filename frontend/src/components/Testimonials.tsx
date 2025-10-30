@@ -5,18 +5,49 @@ import { Star, MessageSquare } from 'lucide-react';
 
 const Testimonials = () => {
   const [testimonials, setTestimonials] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const loadReviews = () => {
-      const savedReviews = localStorage.getItem('admin_reviews');
-      if (savedReviews) {
-        const reviews = JSON.parse(savedReviews);
-        const approvedReviews = reviews.filter((review: any) => review.status === 'approved');
-        setTestimonials(approvedReviews);
+    const loadReviews = async () => {
+      try {
+        setLoading(true);
+        // Load from API
+        const response = await fetch('/api/dashboard/reviews');
+        
+        if (response.ok) {
+          const data = await response.json();
+          setTestimonials(Array.isArray(data.reviews) ? data.reviews.filter((r: any) => r.verified).slice(0, 6) : []);
+        } else {
+          setTestimonials([]);
+        }
+      } catch (error) {
+        console.error('Failed to load reviews:', error);
+        // Fallback to localStorage
+        const savedReviews = localStorage.getItem('admin_reviews');
+        if (savedReviews) {
+          const reviews = JSON.parse(savedReviews);
+          const approvedReviews = Array.isArray(reviews) ? reviews.filter((review: any) => review.status === 'approved') : [];
+          setTestimonials(approvedReviews);
+        }
+      } finally {
+        setLoading(false);
       }
     };
     loadReviews();
   }, []);
+
+  // ✅ Safe filter with null checks
+  const topReviews = testimonials
+    .filter(review => review && typeof review === 'object' && review.rating >= 4)
+    .slice(0, 3);
+
+  if (loading) {
+    return <div>Loading testimonials...</div>;
+  }
+
+  if (topReviews.length === 0) {
+    return null; // Don't show section if no reviews
+  }
 
   return (
     <section className="py-24 bg-background">

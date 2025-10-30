@@ -25,7 +25,7 @@ const EditProduct = () => {
     description: '',
     price: 0,
     stock: 0,
-    category: 'hunting',
+    category: '690284f31f485a64ff8aaa2e',
     imageUrl: ''
   });
 
@@ -56,7 +56,7 @@ const EditProduct = () => {
         description: product.description || '',
         price: product.price || 0,
         stock: product.stock || 0,
-        category: product.category || 'hunting',
+        category: product.category || '690284f31f485a64ff8aaa2e',
         imageUrl: product.images?.[0]?.url || product.images?.[0] || ''
       });
       
@@ -285,14 +285,13 @@ const EditProduct = () => {
                         <SelectValue />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="hunting">Hunting</SelectItem>
-                        <SelectItem value="chef">Chef</SelectItem>
-                        <SelectItem value="bushcraft">Bushcraft</SelectItem>
-                        <SelectItem value="tactical">Tactical</SelectItem>
-                        <SelectItem value="fillet">Fillet</SelectItem>
-                        <SelectItem value="skinner">Skinner</SelectItem>
-                        <SelectItem value="loveless">Loveless</SelectItem>
-                        <SelectItem value="chopper">Chopper</SelectItem>
+                        <SelectItem value="690284f31f485a64ff8aaa2e">Hunting</SelectItem>
+                        <SelectItem value="690284f31f485a64ff8aaa31">Chef</SelectItem>
+                        <SelectItem value="690284f41f485a64ff8aaa34">Bushcraft</SelectItem>
+                        <SelectItem value="690284f51f485a64ff8aaa40">Fillet</SelectItem>
+                        <SelectItem value="690284f41f485a64ff8aaa37">Skinner</SelectItem>
+                        <SelectItem value="690284f41f485a64ff8aaa3a">Loveless</SelectItem>
+                        <SelectItem value="690284f41f485a64ff8aaa3d">Chopper</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

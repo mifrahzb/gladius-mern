@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Input } from '@/components/ui/input';
 import { AlertTriangle, Plus, Minus } from 'lucide-react';
+import { productsApi } from '@/lib/api';
 
 import { toast } from '@/hooks/use-toast';
 
@@ -24,49 +25,59 @@ const Inventory = () => {
     loadInventory();
   }, []);
 
-  const loadInventory = () => {
-    const savedProducts = localStorage.getItem('admin_products');
-    if (savedProducts) {
-      const products = JSON.parse(savedProducts);
-      const inventoryItems: InventoryItem[] = products.map((product: any) => {
-        const reorderLevel = 5;
-        let status = 'In Stock';
-        if (product.stock === 0) status = 'Out of Stock';
-        else if (product.stock <= reorderLevel) status = 'Low Stock';
-        
-        return {
-          id: product.id,
-          name: product.name,
-          sku: `SKU-${product.id.slice(0, 6)}`,
-          stock: product.stock,
-          reorderLevel,
-          status
-        };
-      });
-      setInventory(inventoryItems);
-    }
-  };
+  const loadInventory = async () => {
+  try {
+    const response = await productsApi.getAll({ limit: 100 });
+    const products = response.data.products || response.data;
+    
+    const inventoryItems: InventoryItem[] = products.map((product: any) => {
+      const reorderLevel = 5;
+      let status = 'In Stock';
+      if (product.countInStock === 0) status = 'Out of Stock';
+      else if (product.countInStock <= reorderLevel) status = 'Low Stock';
+      
+      return {
+        id: product._id,
+        name: product.name,
+        sku: `SKU-${product._id.slice(0, 6)}`,
+        stock: product.countInStock,
+        reorderLevel,
+        status
+      };
+    });
+    
+    setInventory(inventoryItems);
+  } catch (error) {
+    console.error('Failed to load inventory:', error);
+  }
+};
 
-  const updateStock = (id: string, change: number) => {
-    const amount = stockChanges[id] || 1;
-    const savedProducts = localStorage.getItem('admin_products');
-    if (savedProducts) {
-      const products = JSON.parse(savedProducts);
-      const updatedProducts = products.map((product: any) => {
-        if (product.id === id) {
-          const newStock = Math.max(0, product.stock + (change * amount));
-          return { ...product, stock: newStock };
-        }
-        return product;
-      });
-      localStorage.setItem('admin_products', JSON.stringify(updatedProducts));
-      loadInventory();
-      toast({
-        title: "Stock updated",
-        description: `Inventory has been ${change > 0 ? 'increased' : 'decreased'} by ${amount}`,
-      });
-    }
-  };
+  const updateStock = async (id: string, change: number) => {
+  const amount = stockChanges[id] || 1;
+  try {
+    const product = inventory.find(item => item.id === id);
+    if (!product) return;
+    
+    const newStock = Math.max(0, product.stock + (change * amount));
+    
+    // Update via API
+    await productsApi.update(id, { countInStock: newStock });
+    
+    // Reload inventory
+    await loadInventory();
+    
+    toast({
+      title: "Stock updated",
+      description: `Inventory has been ${change > 0 ? 'increased' : 'decreased'} by ${amount}`,
+    });
+  } catch (error) {
+    toast({
+      variant: 'destructive',
+      title: "Failed to update stock",
+      description: "Please try again"
+    });
+  }
+};
 
   const lowStockCount = inventory.filter(item => 
     item.status === 'Low Stock' || item.status === 'Out of Stock'

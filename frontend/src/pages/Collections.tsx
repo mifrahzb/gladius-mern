@@ -10,6 +10,7 @@ import gladiusLogo from '@/assets/gladius-logo.png';
 import heroBackground from '@/assets/hero-background.jpg';
 import { productsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 const Collections = () => {
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -21,6 +22,46 @@ const Collections = () => {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const { toast } = useToast();
+  const navigate = useNavigate();
+
+  // ADD THIS FUNCTION
+  const getProductImageUrl = (product: any): string => {
+  if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+    const firstImage = product.images[0];
+    
+    // Handle object with url property
+    if (typeof firstImage === 'object' && firstImage !== null) {
+      // Check if it's a broken character array
+      if (typeof firstImage[0] === 'string') {
+        // Reconstruct the URL from character array
+        const url = Object.values(firstImage).join('');
+        console.log('✅ Reconstructed URL:', url);
+        return url;
+      }
+      
+      if (firstImage.url) {
+        console.log('✅ Using images[0].url:', firstImage.url);
+        return firstImage.url;
+      }
+    }
+    
+    // Handle normal string
+    if (typeof firstImage === 'string') {
+      console.log('✅ Using images[0] string:', firstImage);
+      return firstImage;
+    }
+  }
+  
+  // Try image field
+  if (product.image && typeof product.image === 'string') {
+    console.log('✅ Using image field:', product.image);
+    return product.image;
+  }
+  
+  // Fallback
+  console.log('⚠️ Using fallback image');
+  return 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
+};
 
   // Fetch categories from backend
   const fetchCategories = async () => {
@@ -240,8 +281,11 @@ const Collections = () => {
               {knives.map((knife) => (
                 <Card 
                   key={knife._id} 
-                  className="group cursor-pointer transition-premium hover:shadow-premium border-border bg-card"
-                  onClick={() => window.location.href = `/knife/${knife._id}`}
+                  className="group cursor-pointer..."
+                  onClick={() => {
+                    const categorySlug = knife.category?.slug || 'knives';
+                    navigate(`/product/${categorySlug}/${knife.slug}`);
+                  }}
                 >
                   <div className="relative overflow-hidden rounded-t-lg">
                     {knife.countInStock === 0 && (
@@ -250,9 +294,14 @@ const Collections = () => {
                       </Badge>
                     )}
                     <img
-                      src={knife.image || '/api/placeholder/400/300'}
+                      src={getProductImageUrl(knife)}
                       alt={knife.name}
                       className="w-full h-48 object-cover transition-premium group-hover:scale-105"
+                      onError={(e) => {
+                        const target = e.target as HTMLImageElement;
+                        console.error('❌ Image failed to load:', target.src);
+                        target.src = 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
+                      }}
                     />
                   </div>
                   

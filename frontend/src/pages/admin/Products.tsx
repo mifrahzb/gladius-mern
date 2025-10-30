@@ -40,37 +40,38 @@ const Products = () => {
   }, []);
 
   const fetchProducts = async () => {
-    setLoading(true);
-    try {
-      console.log('🔄 Fetching products...');
-      const response = await productsApi.getAll();
-      console.log('📦 API Response:', response.data);
-      
-      // Handle both array and paginated response formats
-      let productsData: Product[];
-      if (Array.isArray(response.data)) {
-        productsData = response.data;
-      } else if (response.data.products && Array.isArray(response.data.products)) {
-        productsData = response.data.products;
-      } else {
-        console.warn('⚠️ Unexpected response format:', response.data);
-        productsData = [];
-      }
-      
-      console.log('✅ Products loaded:', productsData.length);
-      setProducts(productsData);
-    } catch (error: any) {
-      console.error('❌ Error fetching products:', error);
-      toast({
-        variant: 'destructive',
-        title: 'Error',
-        description: error.response?.data?.message || 'Failed to load products',
-      });
-      setProducts([]);
-    } finally {
-      setLoading(false);
+  setLoading(true);
+  try {
+    console.log('🔄 Fetching products...');
+    // Request with higher limit to show all products
+    const response = await productsApi.getAll({ limit: 100 }); // Changed from default
+    console.log('📦 API Response:', response.data);
+    
+    // Handle both array and paginated response formats
+    let productsData: Product[];
+    if (Array.isArray(response.data)) {
+      productsData = response.data;
+    } else if (response.data.products && Array.isArray(response.data.products)) {
+      productsData = response.data.products;
+    } else {
+      console.warn('⚠️ Unexpected response format:', response.data);
+      productsData = [];
     }
-  };
+    
+    console.log('✅ Products loaded:', productsData.length);
+    setProducts(productsData);
+  } catch (error: any) {
+    console.error('❌ Error fetching products:', error);
+    toast({
+      variant: 'destructive',
+      title: 'Error',
+      description: error.response?.data?.message || 'Failed to load products',
+    });
+    setProducts([]);
+  } finally {
+    setLoading(false);
+  }
+};
 
   const handleDelete = async (id: string) => {
     if (!confirm('Are you sure you want to delete this product?')) return;
@@ -94,6 +95,13 @@ const Products = () => {
         description: error.response?.data?.message || 'Failed to delete product',
       });
     }
+  };
+
+  const getCategoryName = (category: any): string => {
+    if (!category) return 'Uncategorized';
+    if (typeof category === 'string') return category;
+    if (typeof category === 'object' && category.name) return category.name;
+    return 'Uncategorized';
   };
 
   // Helper function to get image URL
@@ -194,7 +202,7 @@ const Products = () => {
                       {product.name}
                     </h3>
                     <p className="text-sm text-muted-foreground mb-2 capitalize">
-                      {typeof product.category === 'object' ? product.category.name : product.category || 'Uncategorized'}
+                      {getCategoryName(product.category)}
                     </p>
                     
                     {product.description && (

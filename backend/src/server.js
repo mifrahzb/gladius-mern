@@ -12,7 +12,10 @@ import couponRoutes from './routes/couponRoutes.js';
 import adminRoutes from './routes/adminRoutes.js';
 import emailRoutes from './routes/emailRoutes.js';
 import uploadRoutes from './routes/uploadRoutes.js';
+import categoryRoutes from './routes/categoryRoutes.js';
 import { notFound, errorHandler } from './middleware/errorHandler.js';
+import dashboardRoutes from './routes/dashboardRoutes.js';
+import seoRoutes from './routes/seoRoutes.js';
 
 dotenv.config();
 connectDB();
@@ -46,6 +49,9 @@ app.use('/api/coupons', couponRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/email', emailRoutes);
 app.use('/api/upload', uploadRoutes);
+app.use('/api/categories', categoryRoutes);
+app.use('/api/dashboard', dashboardRoutes);
+app.use('/', seoRoutes);
 
 // Health check endpoint
 app.get('/api/health', (req, res) => res.json({ 

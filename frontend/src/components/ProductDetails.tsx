@@ -4,15 +4,13 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { useToast } from '@/hooks/use-toast';
 import { useCart } from '@/hooks/useCart';
 import { 
   ArrowLeft, 
   ShoppingCart, 
-  Star, 
-  StarHalf,
+  Star,
   Truck,
   Shield,
   ArrowRight,
@@ -284,7 +282,8 @@ const ProductDetails = () => {
                 alt={product.name}
                 className="w-full h-96 object-cover"
                 onError={(e) => {
-                  e.target.src = '/api/placeholder/600/400';
+                  const target = e.target as HTMLImageElement;
+                  target.src = '/api/placeholder/600/400';
                 }}
               />
             </div>
@@ -305,7 +304,8 @@ const ProductDetails = () => {
                       alt={`${product.name} view ${index + 1}`}
                       className="w-full h-20 object-cover"
                       onError={(e) => {
-                        e.target.src = '/api/placeholder/100/80';
+                        const target = e.target as HTMLImageElement;
+                        target.src = '/api/placeholder/100/80';
                       }}
                     />
                   </button>
