@@ -11,24 +11,11 @@ const Testimonials = () => {
     const loadReviews = async () => {
       try {
         setLoading(true);
-        // Load from API
-        const response = await fetch('/api/dashboard/reviews');
-        
-        if (response.ok) {
-          const data = await response.json();
-          setTestimonials(Array.isArray(data.reviews) ? data.reviews.filter((r: any) => r.verified).slice(0, 6) : []);
-        } else {
-          setTestimonials([]);
-        }
+        // Set empty array - no API call
+        setTestimonials([]);
       } catch (error) {
         console.error('Failed to load reviews:', error);
-        // Fallback to localStorage
-        const savedReviews = localStorage.getItem('admin_reviews');
-        if (savedReviews) {
-          const reviews = JSON.parse(savedReviews);
-          const approvedReviews = Array.isArray(reviews) ? reviews.filter((review: any) => review.status === 'approved') : [];
-          setTestimonials(approvedReviews);
-        }
+        setTestimonials([]);
       } finally {
         setLoading(false);
       }
