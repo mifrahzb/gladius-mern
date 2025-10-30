@@ -9,29 +9,49 @@ export const createOrder = asyncHandler(async (req, res) => {
     itemsPrice, taxPrice, shippingPrice, totalPrice
   } = req.body;
 
+  console.log('📦 Creating order:', { orderItems, shippingAddress, paymentMethod });
+
   if (!orderItems || orderItems.length === 0) {
     return res.status(400).json({ message: 'No order items' });
   }
 
-  // reduce stock
+  // Validate and reduce stock
   for (const item of orderItems) {
+    console.log('🔍 Checking product:', item.product);
+    
     const product = await Product.findById(item.product);
-    if (product) {
-      if (product.stock < item.qty) {
-        return res.status(400).json({ message: `Not enough stock for ${product.name}` });
-      }
-      product.stock = product.stock - item.qty;
-      await product.save();
+    
+    if (!product) {
+      return res.status(404).json({ message: `Product not found: ${item.name}` });
     }
+
+    // ✅ FIX: Use countInStock instead of stock
+    if (product.countInStock < item.qty) {
+      return res.status(400).json({ 
+        message: `Not enough stock for ${product.name}. Available: ${product.countInStock}, Requested: ${item.qty}` 
+      });
+    }
+    
+    // ✅ FIX: Reduce countInStock
+    product.countInStock = product.countInStock - item.qty;
+    await product.save();
+    console.log(`✅ Reduced stock for ${product.name}: ${product.countInStock} remaining`);
   }
 
   const order = new Order({
     user: req.user._id,
-    orderItems, shippingAddress, paymentMethod,
-    itemsPrice, taxPrice, shippingPrice, totalPrice
+    orderItems, 
+    shippingAddress, 
+    paymentMethod,
+    itemsPrice, 
+    taxPrice, 
+    shippingPrice, 
+    totalPrice
   });
 
   const createdOrder = await order.save();
+  console.log('✅ Order created:', createdOrder._id);
+  
   res.status(201).json(createdOrder);
 });
 
@@ -43,21 +63,31 @@ export const getMyOrders = asyncHandler(async (req, res) => {
 
 // Get all orders (admin)
 export const getAllOrders = asyncHandler(async (req, res) => {
-  const orders = await Order.find({}).populate('user', 'name email').sort({ createdAt: -1 });
-  res.json(orders);
+  const orders = await Order.find({})
+    .populate('user', 'name email')
+    .sort({ createdAt: -1 });
+  res.json({ orders });
 });
 
 // Get order by ID
 export const getOrderById = asyncHandler(async (req, res) => {
-  const order = await Order.findById(req.params.id).populate('user', 'name email');
-  if (order) res.json(order);
-  else res.status(404).json({ message: 'Order not found' });
+  const order = await Order.findById(req.params.id)
+    .populate('user', 'name email');
+    
+  if (order) {
+    res.json(order);
+  } else {
+    res.status(404).json({ message: 'Order not found' });
+  }
 });
 
 // Update order to paid
 export const updateOrderToPaid = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
-  if (!order) return res.status(404).json({ message: 'Order not found' });
+  
+  if (!order) {
+    return res.status(404).json({ message: 'Order not found' });
+  }
 
   order.isPaid = true;
   order.paidAt = Date.now();
@@ -75,10 +105,14 @@ export const updateOrderToPaid = asyncHandler(async (req, res) => {
 // Update order to delivered (admin)
 export const updateOrderToDelivered = asyncHandler(async (req, res) => {
   const order = await Order.findById(req.params.id);
-  if (!order) return res.status(404).json({ message: 'Order not found' });
+  
+  if (!order) {
+    return res.status(404).json({ message: 'Order not found' });
+  }
 
   order.isDelivered = true;
   order.deliveredAt = Date.now();
+  
   const updated = await order.save();
   res.json(updated);
 });
@@ -110,7 +144,7 @@ export const updateOrderStatus = async (req, res) => {
       order.shippedAt = Date.now();
     } else if (status === 'delivered') {
       order.deliveredAt = Date.now();
-      order.isPaid = true; // Auto-mark as paid on delivery
+      order.isPaid = true;
       order.paidAt = order.paidAt || Date.now();
     }
 
@@ -121,6 +155,7 @@ export const updateOrderStatus = async (req, res) => {
       order: updatedOrder
     });
   } catch (error) {
+    console.error('❌ Update order status error:', error);
     res.status(500).json({ message: error.message });
   }
 };
