@@ -8,7 +8,6 @@ const productSchema = new mongoose.Schema({
   image: {
     type: String,
   },
-  // Change this to accept both strings and objects
   images: [mongoose.Schema.Types.Mixed],
   brand: {
     type: String,
@@ -23,7 +22,6 @@ const productSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
-  // Rich text description for SEO (HTML format with formatting)
   richDescription: {
     type: String,
   },
@@ -49,6 +47,20 @@ const productSchema = new mongoose.Schema({
     type: String,
     unique: true,
   },
+  
+  // ✅ ADD: Top-level specification fields from seed data
+  sku: String,
+  handle: String,
+  blade: String,
+  lengthBlade: String,
+  lengthHandle: String,
+  packageWeight: Number,
+  casing: String,
+  finishing: String,
+  material: String,
+  bladeLength: String,
+  
+  // Nested specifications object (for additional specs)
   specifications: {
     bladeLength: String,
     handleMaterial: String,
@@ -58,32 +70,30 @@ const productSchema = new mongoose.Schema({
     hardness: String,
     origin: String
   },
+  
   isFeatured: {
     type: Boolean,
     default: false
   },
-  // SEO Meta Fields - ✅ REMOVED STRICT LENGTH LIMITS
+  
+  // SEO Meta Fields
   metaTitle: {
     type: String,
-    maxlength: 200 // Increased from 60 to 200
+    maxlength: 200
   },
   metaDescription: {
     type: String,
-    maxlength: 300 // Increased from 160 to 300
+    maxlength: 300
   },
-  metaKeywords: [String], // Array of keywords for SEO
-  // Image Alt Text for SEO
+  metaKeywords: [String],
   imageAlts: [{
     imageUrl: String,
     altText: String
   }],
-  // Open Graph & Social Media Meta
   ogTitle: String,
   ogDescription: String,
   ogImage: String,
-  // Canonical URL
   canonicalUrl: String,
-  // Focus Keyword for SEO
   focusKeyword: String,
 }, {
   timestamps: true,
@@ -92,16 +102,14 @@ const productSchema = new mongoose.Schema({
 // Add slug generation before saving
 productSchema.pre('save', function(next) {
   if (this.isModified('name')) {
-    // Generate SEO-friendly slug
     this.slug = this.name
       .toLowerCase()
-      .replace(/[^a-zA-Z0-9\s-]/g, '') // Remove special characters
-      .replace(/\s+/g, '-') // Replace spaces with hyphens
-      .replace(/-+/g, '-') // Remove duplicate hyphens
-      .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
+      .replace(/[^a-zA-Z0-9\s-]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
+      .replace(/^-|-$/g, '');
   }
   
-  // Auto-generate meta title if not provided - ✅ FIXED: Truncate to fit limit
   if (this.isModified('name') && !this.metaTitle) {
     const generatedTitle = `${this.name} | Gladius Traders`;
     this.metaTitle = generatedTitle.length > 200 
@@ -109,9 +117,8 @@ productSchema.pre('save', function(next) {
       : generatedTitle;
   }
   
-  // Auto-generate meta description if not provided - ✅ FIXED: Truncate to fit limit
   if (this.isModified('description') && !this.metaDescription) {
-    const plainDesc = this.description.replace(/<[^>]*>/g, ''); // Strip HTML
+    const plainDesc = this.description.replace(/<[^>]*>/g, '');
     this.metaDescription = plainDesc.length > 300 
       ? plainDesc.substring(0, 297) + '...' 
       : plainDesc;

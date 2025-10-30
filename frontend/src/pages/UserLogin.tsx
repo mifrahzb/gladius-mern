@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import Header from '@/components/Header';
 import Footer from '@/components/Footer';
@@ -32,10 +32,11 @@ const UserLogin = () => {
   const [passwordError, setPasswordError] = useState('');
 
   // Simple redirect check - no useEffect
+  useEffect(() => {
   if (isAuthenticated) {
     navigate('/', { replace: true });
-    return null; // Don't render anything during redirect
   }
+}, [isAuthenticated, navigate]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();

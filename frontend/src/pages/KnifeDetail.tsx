@@ -7,7 +7,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ArrowRight } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
-import { productsApi, reviewsApi } from '@/lib/api';
+import { reviewsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
 import { ProductReviews } from '@/components/ProductReviews';
 import { useWishlist } from '@/context/WishlistContext';
@@ -16,7 +16,6 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 
 const KnifeDetail = () => {
-  const { id } = useParams();
   const { categorySlug, productSlug } = useParams();
   const navigate = useNavigate();
   const [selectedImage, setSelectedImage] = useState(0);
@@ -48,65 +47,65 @@ const KnifeDetail = () => {
     );
   };
   
+  const fetchProductDetails = async () => {
+    setLoading(true);
+    try {
+      console.log('🔍 Fetching:', categorySlug, productSlug);
+      
+      const response = await fetch(`/api/products/${categorySlug}/${productSlug}`);
+      
+      if (!response.ok) {
+        throw new Error('Product not found');
+      }
+      
+      const data = await response.json();
+      console.log('✅ Product loaded:', data.name);
+      console.log('✅ Product ID:', data._id);
+      setKnife(data);
+    } catch (error) {
+      console.error('❌ Error loading product:', error);
+      toast({
+        variant: 'destructive',
+        title: 'Error',
+        description: 'Product not found',
+      });
+      navigate('/collections');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const fetchReviews = async () => {
+    try {
+      if (!knife?._id) {
+        console.log('⚠️ No product ID yet, skipping reviews fetch');
+        return;
+      }
+      
+      console.log('📝 Fetching reviews for product:', knife._id);
+      const response = await reviewsApi.getByProduct(knife._id);
+      const reviewsData = response.data?.reviews || response.data || [];
+      setReviews(Array.isArray(reviewsData) ? reviewsData : []);
+      console.log('✅ Reviews loaded:', reviewsData.length);
+    } catch (error: any) {
+      if (error.response?.status !== 401) {
+        console.error('❌ Reviews error:', error);
+      }
+      setReviews([]);
+    }
+  };
+
   useEffect(() => {
-    if (id) {
+    if (categorySlug && productSlug) {
       fetchProductDetails();
+    }
+  }, [categorySlug, productSlug]);
+
+  useEffect(() => {
+    if (knife?._id) {
       fetchReviews();
     }
-  }, [id]);
-
-  const fetchProductDetails = async () => {
-  setLoading(true);
-  try {
-    console.log('🔍 Fetching:', categorySlug, productSlug);
-    
-    const response = await fetch(`/api/products/${categorySlug}/${productSlug}`);
-    
-    if (!response.ok) {
-      throw new Error('Product not found');
-    }
-    
-    const data = await response.json();
-    console.log('✅ Product loaded:', data.name);
-    setKnife(data);
-  } catch (error) {
-    console.error('❌ Error loading product:', error);
-    toast({
-      variant: 'destructive',
-      title: 'Error',
-      description: 'Product not found',
-    });
-    navigate('/collections');
-  } finally {
-    setLoading(false);
-  }
-};
-
-const fetchReviews = async () => {
-  try {
-    if (!knife?._id) return;
-    
-    const response = await reviewsApi.getByProduct(knife._id);
-    const reviewsData = response.data?.reviews || response.data || [];
-    setReviews(Array.isArray(reviewsData) ? reviewsData : []);
-  } catch (error) {
-    // 401 error is OK - user not logged in
-    console.log('Reviews not available (not logged in)');
-    setReviews([]);
-  }
-};
-
-useEffect(() => {
-  if (categorySlug && productSlug) {
-    fetchProductDetails();
-  }
-}, [categorySlug, productSlug]);
-
-useEffect(() => {
-  if (knife?._id) {
-    fetchReviews();
-  }
-}, [knife?._id]);
+  }, [knife?._id]);
 
   const handleWishlist = async () => {
     if (!user) {
@@ -135,23 +134,19 @@ useEffect(() => {
     }
   };
 
-  // Get image URL helper
   const getImageUrl = (img: any) => {
     if (typeof img === 'string') return img;
     if (img?.url) return img.url;
     return '/placeholder-knife.jpg';
   };
 
-  // Get image alt text
   const getImageAlt = (index: number = 0) => {
     if (!knife) return '';
     
-    // Check if there's a custom alt text
     if (knife.imageAlts?.[index]?.altText) {
       return knife.imageAlts[index].altText;
     }
     
-    // Generate SEO-friendly alt text
     const categoryName = knife.category?.name || 'Knife';
     if (index === 0) {
       return `${knife.name} - Handcrafted ${categoryName} from Wazirabad, Pakistan`;
@@ -159,7 +154,6 @@ useEffect(() => {
     return `${knife.name} ${categoryName} - View ${index + 1}`;
   };
 
-  // Generate structured data for SEO
   const getStructuredData = () => {
     if (!knife) return null;
 
@@ -225,17 +219,15 @@ useEffect(() => {
   }
 
   const categoryName = knife.category?.name || 'Knives';
-  const categorySlugFromDB = knife.category?.slug || categorySlug;
 
   return (
     <div className="min-h-screen bg-background">
-      {/* SEO Component */}
       <SEO
         title={knife.metaTitle || `${knife.name} - Handcrafted ${categoryName}`}
         description={knife.metaDescription || knife.description}
         keywords={knife.metaKeywords || [knife.name, categoryName, 'handcrafted knife', 'Wazirabad', 'Pakistan']}
         image={getImageUrl(knife.images?.[0])}
-        url={`/product/${categorySlug}/${knife.slug}`} // ✅ Uses param from URL
+        url={`/product/${categorySlug}/${knife.slug}`}
         type="product"
         structuredData={getStructuredData()}
         canonicalUrl={knife.canonicalUrl}
@@ -244,12 +236,7 @@ useEffect(() => {
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Breadcrumb Navigation */}
         <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6" aria-label="Breadcrumb">
-          <Button variant="ghost" onClick={() => navigate(`/knives/${categorySlug}`)} className="p-0 h-auto hover:text-brown">
-            {categoryName}
-          </Button>
-          <ArrowRight className="h-4 w-4" />
           <Button variant="ghost" onClick={() => navigate('/collections')} className="p-0 h-auto hover:text-brown">
             Collections
           </Button>
@@ -262,9 +249,7 @@ useEffect(() => {
         </nav>
 
         <div className="grid lg:grid-cols-2 gap-12">
-          {/* Product Images */}
           <div className="space-y-4">
-            {/* Main Image */}
             <div className="aspect-square overflow-hidden rounded-lg bg-gray-100">
               <img
                 src={getImageUrl(knife.images?.[selectedImage])}
@@ -274,7 +259,6 @@ useEffect(() => {
               />
             </div>
   
-            {/* Thumbnail Gallery */}
             {knife.images && knife.images.length > 1 && (
               <div className="grid grid-cols-4 gap-4">
                 {knife.images.map((img: any, idx: number) => (
@@ -298,7 +282,6 @@ useEffect(() => {
             )}
           </div>
 
-          {/* Product Info */}
           <div className="space-y-6">
             <div>
               <Badge className="mb-2">{categoryName}</Badge>
@@ -361,14 +344,20 @@ useEffect(() => {
                   size="lg" 
                   className="flex-1"
                   disabled={knife.countInStock === 0}
-                  onClick={() => addToCart({
-                    id: knife._id,
-                    name: knife.name,
-                    price: knife.price,
-                    image: getImageUrl(knife.images?.[0]),
-                    category: categoryName,
-                    countInStock: knife.countInStock
-                  })}
+                  onClick={() => {
+                    addToCart({
+                      id: knife._id,
+                      name: knife.name,
+                      price: knife.price,
+                      image: getImageUrl(knife.images?.[0]),
+                      category: categoryName,
+                      countInStock: knife.countInStock
+                    });
+                    toast({
+                      title: 'Added to cart!',
+                      description: `${knife.name} x${quantity}`
+                    });
+                  }}
                 >
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Add to Cart - ${(knife.price * quantity).toFixed(2)}
@@ -419,7 +408,6 @@ useEffect(() => {
           </div>
         </div>
 
-        {/* Product Details Tabs */}
         <div className="mt-16">
           <Tabs defaultValue="description" className="w-full">
             <TabsList className="grid w-full grid-cols-3">
@@ -431,7 +419,6 @@ useEffect(() => {
             <TabsContent value="description" className="mt-8">
               <Card>
                 <CardContent className="p-6">
-                  {/* Use rich description if available, otherwise plain description */}
                   {knife.richDescription ? (
                     <div 
                       className="prose max-w-none text-muted-foreground"
@@ -449,25 +436,114 @@ useEffect(() => {
             <TabsContent value="specifications" className="mt-8">
               <Card>
                 <CardContent className="p-6">
-                  <div className="grid md:grid-cols-2 gap-4">
+                  <div className="grid md:grid-cols-2 gap-6">
+                    {knife.sku && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Product Code (SKU)</span>
+                        <p className="text-muted-foreground font-mono">{knife.sku}</p>
+                      </div>
+                    )}
+                    
+                    {knife.blade && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Blade Material</span>
+                        <p className="text-muted-foreground">{knife.blade}</p>
+                      </div>
+                    )}
+                    
+                    {knife.lengthBlade && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Blade Length</span>
+                        <p className="text-muted-foreground">{knife.lengthBlade}</p>
+                      </div>
+                    )}
+                    
+                    {knife.lengthHandle && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Handle Length</span>
+                        <p className="text-muted-foreground">{knife.lengthHandle}</p>
+                      </div>
+                    )}
+                    
+                    {knife.handle && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Handle Material</span>
+                        <p className="text-muted-foreground">{knife.handle}</p>
+                      </div>
+                    )}
+                    
+                    {knife.packageWeight && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Weight</span>
+                        <p className="text-muted-foreground">
+                          {knife.packageWeight}g ({(knife.packageWeight / 28.35).toFixed(2)} oz)
+                        </p>
+                      </div>
+                    )}
+                    
+                    {knife.finishing && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Blade Finish</span>
+                        <p className="text-muted-foreground">{knife.finishing}</p>
+                      </div>
+                    )}
+                    
+                    {knife.casing && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Included Sheath</span>
+                        <p className="text-muted-foreground">{knife.casing}</p>
+                      </div>
+                    )}
+                    
+                    {knife.brand && (
+                      <div className="space-y-1 border-b border-border pb-3">
+                        <span className="text-sm font-semibold text-foreground">Brand</span>
+                        <p className="text-muted-foreground">{knife.brand}</p>
+                      </div>
+                    )}
+                    
                     {knife.specifications && Object.entries(knife.specifications).map(([key, value]: [string, any]) => (
                       value && (
-                        <div key={key} className="flex justify-between py-2 border-b border-border">
-                          <span className="font-medium text-foreground capitalize">
-                            {key.replace(/([A-Z])/g, ' $1').trim()}:
+                        <div key={key} className="space-y-1 border-b border-border pb-3">
+                          <span className="text-sm font-semibold text-foreground">
+                            {key.replace(/([A-Z])/g, ' $1').trim()
+                              .split(' ')
+                              .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                              .join(' ')}
                           </span>
-                          <span className="text-muted-foreground">{value}</span>
+                          <p className="text-muted-foreground">{value}</p>
                         </div>
                       )
                     ))}
                   </div>
+                  
+                  <div className="mt-8 pt-6 border-t border-border">
+                    <div className="bg-muted/30 rounded-lg p-6">
+                      <h3 className="text-lg font-semibold mb-3 flex items-center">
+                        <Shield className="w-5 h-5 mr-2 text-brown" />
+                        Craftsmanship & Heritage
+                      </h3>
+                      <p className="text-muted-foreground leading-relaxed">
+                        Handcrafted by master craftsmen in <strong>Wazirabad, Pakistan</strong> - the knife-making capital of the world since 1890. 
+                        Each knife is individually forged using traditional techniques passed down through generations, combined with modern quality standards. 
+                        Every piece undergoes rigorous quality inspection to ensure exceptional sharpness, balance, and durability.
+                      </p>
+                    </div>
+                  </div>
+                  
+                  {!knife.blade && !knife.lengthBlade && !knife.handle && !knife.specifications && (
+                    <div className="text-center py-12 text-muted-foreground">
+                      <p className="text-lg">Detailed specifications coming soon.</p>
+                      <p className="text-sm mt-2">Contact us for more information about this product.</p>
+                    </div>
+                  )}
                 </CardContent>
               </Card>
             </TabsContent>
             
             <TabsContent value="reviews" className="mt-8">
               <div className="space-y-6">
-                <ProductReviews productId={id!} />
+                {knife._id && <ProductReviews productId={knife._id} />}
                 {!reviews || reviews.length === 0 ? (
                   <Card>
                     <CardContent className="p-6 text-center text-muted-foreground">
