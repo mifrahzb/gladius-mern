@@ -1,57 +1,47 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { ArrowRight, Star } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
-interface Product {
-  _id: string;
-  name: string;
-  slug: string;
-  description: string;
-  price: number;
-  image: string;
-  images: any[];
-  rating: number;
-  countInStock: number;
-  category: any;
-}
-
 const FeaturedProducts = () => {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
+  const [featuredProducts, setFeaturedProducts] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    const fetchFeaturedProducts = async () => {
+      try {
+        const response = await fetch('/api/products?limit=8&featured=true');
+        const data = await response.json();
+        const products = data?.products || data || [];
+        setFeaturedProducts(Array.isArray(products) ? products.slice(0, 8) : []);
+      } catch (error) {
+        console.error('Failed to fetch featured products:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+
     fetchFeaturedProducts();
   }, []);
 
-  const fetchFeaturedProducts = async () => {
-    try {
-      const response = await fetch('/api/products/featured');
-      const data = await response.json();
-      setProducts(data);
-    } catch (error) {
-      console.error('Failed to fetch featured products:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const getImageUrl = (product: Product) => {
-    if (product.images && product.images.length > 0) {
+  const getProductImageUrl = (product: any): string => {
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
       const firstImage = product.images[0];
-      return typeof firstImage === 'string' ? firstImage : firstImage?.url;
+      if (typeof firstImage === 'object' && firstImage?.url) return firstImage.url;
+      if (typeof firstImage === 'string') return firstImage;
     }
-    return product.image || 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
+    if (product.image) return product.image;
+    return 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
   };
 
   if (loading) {
     return (
-      <section className="py-24 bg-slate-light">
+      <section className="py-20 bg-background">
         <div className="container mx-auto px-4">
-          <div className="text-center">
+          <div className="text-center py-12">
             <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-brown mx-auto"></div>
           </div>
         </div>
@@ -59,57 +49,69 @@ const FeaturedProducts = () => {
     );
   }
 
-  if (products.length === 0) return null;
+  if (featuredProducts.length === 0) {
+    return null;
+  }
 
   return (
-    <section className="py-24 bg-slate-light">
+    <section className="py-20 bg-muted/30">
       <div className="container mx-auto px-4">
         {/* Section Header */}
-        <div className="text-center mb-16">
-          <h2 className="text-4xl md:text-5xl font-bold text-slate-dark mb-4">
-            Handcrafted Excellence
+        <div className="text-center max-w-3xl mx-auto mb-12">
+          <h2 className="text-4xl font-bold text-foreground mb-4">
+            Featured Collection
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-            Each knife is meticulously forged by master craftsmen in Wazirabad, Pakistan,
-            using techniques passed down through generations.
+          <p className="text-lg text-muted-foreground">
+            Discover our most popular handcrafted knives, trusted by hunters and chefs worldwide
           </p>
         </div>
 
-        {/* Featured Products Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
-          {products.map((product) => (
+        {/* Products Grid */}
+        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
+          {featuredProducts.map((product) => (
             <Card 
               key={product._id}
-              className="group cursor-pointer transition-all duration-300 hover:shadow-2xl border-2 hover:border-brown"
-              onClick={() => navigate(`/product/${product.category?.slug || 'knives'}/${product.slug}`)}
+              className="group overflow-hidden cursor-pointer hover:shadow-premium-hover transition-premium"
+              onClick={() => {
+                const categorySlug = product.category?.slug || 'knives';
+                navigate(`/product/${categorySlug}/${product.slug}`);
+              }}
             >
-              <div className="relative overflow-hidden rounded-t-lg bg-white">
-                <Badge className="absolute top-4 left-4 z-10 bg-brown text-white">
-                  Featured
-                </Badge>
+              {/* Product Image */}
+              <div className="relative overflow-hidden bg-gray-50">
                 {product.countInStock === 0 && (
-                  <Badge className="absolute top-4 right-4 z-10 bg-red-500 text-white">
+                  <Badge className="absolute top-3 left-3 z-10 bg-red-500 text-white">
                     Sold Out
                   </Badge>
                 )}
-                <div className="aspect-square overflow-hidden">
-                  <img
-                    src={getImageUrl(product)}
-                    alt={product.name}
-                    className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
-                    onError={(e) => {
-                      const target = e.target as HTMLImageElement;
-                      target.src = 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=400&fit=crop';
-                    }}
-                  />
-                </div>
+                {product.isFeatured && product.countInStock > 0 && (
+                  <Badge className="absolute top-3 left-3 z-10 bg-brown text-white">
+                    Featured
+                  </Badge>
+                )}
+                <img
+                  src={getProductImageUrl(product)}
+                  alt={product.name}
+                  className="w-full h-64 object-cover group-hover:scale-110 transition-premium"
+                  onError={(e) => {
+                    (e.target as HTMLImageElement).src = 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
+                  }}
+                />
               </div>
-              
-              <CardContent className="p-6 bg-white">
-                <h3 className="text-xl font-bold text-slate-dark mb-2 line-clamp-1 group-hover:text-brown transition-colors">
+
+              {/* Product Info */}
+              <CardContent className="p-6">
+                <div className="mb-2">
+                  <Badge variant="outline" className="text-xs border-brown text-brown">
+                    {product.category?.name || 'Knife'}
+                  </Badge>
+                </div>
+                
+                <h3 className="font-bold text-lg mb-2 text-foreground line-clamp-1">
                   {product.name}
                 </h3>
-                <p className="text-sm text-gray-600 mb-4 line-clamp-2 h-10">
+                
+                <p className="text-sm text-muted-foreground mb-4 line-clamp-2 min-h-[40px]">
                   {product.description}
                 </p>
                 
@@ -120,7 +122,7 @@ const FeaturedProducts = () => {
                   {product.rating > 0 && (
                     <div className="flex items-center gap-1">
                       <Star className="w-4 h-4 fill-yellow-400 text-yellow-400" />
-                      <span className="text-sm font-medium text-slate-dark">
+                      <span className="text-sm font-medium text-foreground">
                         {product.rating.toFixed(1)}
                       </span>
                     </div>
@@ -129,7 +131,7 @@ const FeaturedProducts = () => {
 
                 <Button 
                   variant="default" 
-                  className="w-full bg-brown hover:bg-brown/90 text-white group-hover:bg-slate-dark transition-colors"
+                  className="w-full bg-brown hover:bg-brown/90 text-white group-hover:shadow-md transition-all"
                   disabled={product.countInStock === 0}
                 >
                   {product.countInStock > 0 ? (
@@ -152,7 +154,7 @@ const FeaturedProducts = () => {
             variant="outline" 
             size="lg"
             onClick={() => navigate('/collections')}
-            className="border-2 border-brown text-brown hover:bg-brown hover:text-white transition-all"
+            className="border-2 border-brown text-brown hover:bg-brown hover:text-white transition-all shadow-sm hover:shadow-premium"
           >
             View All Collection
             <ArrowRight className="ml-2 h-5 w-5" />

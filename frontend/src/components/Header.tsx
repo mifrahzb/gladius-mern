@@ -1,44 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Badge } from '@/components/ui/badge';
-import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
-import { Menu, ShoppingCart, Search, User, ChevronDown, Home } from 'lucide-react';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { ShoppingCart, User, Menu, X, Home, Search as SearchIcon, ChevronDown } from 'lucide-react';
 import gladiusLogo from '@/assets/gladius-logo.png';
-import { useCart } from '@/hooks/useCart';
 
 const Header = () => {
-  const { items } = useCart();
   const navigate = useNavigate();
-  const cartCount = items.length;
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [categories, setCategories] = useState<any[]>([]);
+
+  // Fetch categories from backend
+  useEffect(() => {
+    const fetchCategories = async () => {
+      try {
+        const response = await fetch('/api/categories');
+        const data = await response.json();
+        setCategories(data);
+      } catch (error) {
+        console.error('Failed to fetch categories:', error);
+      }
+    };
+    fetchCategories();
+  }, []);
 
   const navItems = [
-    { name: 'Home', href: '/' },
     { name: 'About', href: '/about' },
     { name: 'Contact', href: '/contact' },
   ];
 
-  const knifeCollections = [
-    { name: 'Hunting Knives', href: '/knives/hunting' },
-    { name: 'Chef Knives', href: '/knives/chef' },
-    { name: 'Bushcraft Knives', href: '/knives/bushcraft' },
-    { name: 'Skinner Knives', href: '/knives/skinner' },
-    { name: 'Loveless Knives', href: '/knives/loveless' },
-    { name: 'Chopper Knives', href: '/knives/chopper' },
-    { name: 'Fillet Knives', href: '/knives/fillet' },
-  ];
-
   return (
-    <header className="sticky top-0 z-50 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-50 w-full border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
         <div className="flex h-16 items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-3">
-            <img 
-              src={gladiusLogo} 
-              alt="Gladius Traders Logo" 
-              className="h-10 w-10 object-contain"
+          <Link to="/" className="flex items-center space-x-2">
+            <img
+              src={gladiusLogo}
+              alt="Gladius Logo"
+              className="h-8 w-auto"
             />
             <span className="text-xl font-bold text-foreground">Gladius Traders</span>
           </Link>
@@ -72,13 +77,13 @@ const Header = () => {
                     View All
                   </Link>
                 </DropdownMenuItem>
-                {knifeCollections.map((collection) => (
-                  <DropdownMenuItem key={collection.name} asChild>
+                {categories.map((category) => (
+                  <DropdownMenuItem key={category._id} asChild>
                     <Link
-                      to={collection.href}
+                      to={`/collections?category=${category.slug}`}
                       className="w-full text-sm text-foreground hover:text-brown transition-smooth cursor-pointer"
                     >
-                      {collection.name}
+                      {category.name} Knives
                     </Link>
                   </DropdownMenuItem>
                 ))}
@@ -104,68 +109,73 @@ const Header = () => {
               onClick={() => navigate('/search')}
               title="Search"
             >
-              <Search className="h-4 w-4" />
+              <SearchIcon className="h-4 w-4" />
             </Button>
-            
+
+            <Button 
+              variant="ghost" 
+              size="icon"
+              onClick={() => navigate('/cart')}
+              title="Shopping Cart"
+            >
+              <ShoppingCart className="h-4 w-4" />
+            </Button>
+
             <Button 
               variant="ghost" 
               size="icon"
               onClick={() => navigate('/login')}
-              title="Login"
+              title="Account"
             >
               <User className="h-4 w-4" />
             </Button>
 
-            <Link to="/cart">
-              <Button variant="ghost" size="icon" className="relative" title="Cart">
-                <ShoppingCart className="h-4 w-4" />
-                {cartCount > 0 && (
-                  <Badge className="absolute -top-1 -right-1 h-4 w-4 p-0 flex items-center justify-center text-xs">
-                    {cartCount}
-                  </Badge>
-                )}
-              </Button>
-            </Link>
-
-            {/* Mobile menu */}
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button variant="ghost" size="icon" className="md:hidden">
-                  <Menu className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent side="right" className="w-[300px] sm:w-[400px]">
-                <nav className="flex flex-col space-y-4 mt-8">
-                  {navItems.map((item) => (
-                    <Link
-                      key={item.name}
-                      to={item.href}
-                      className="text-lg font-medium text-foreground hover:text-brown transition-smooth px-4 py-2 rounded-lg hover:bg-secondary"
-                    >
-                      {item.name}
-                    </Link>
-                  ))}
-                  
-                  {/* Mobile Collections */}
-                  <div className="px-4 py-2">
-                    <h3 className="text-lg font-medium text-foreground mb-2">Collections</h3>
-                    <div className="space-y-2 ml-4">
-                      {knifeCollections.map((collection) => (
-                        <Link
-                          key={collection.name}
-                          to={collection.href}
-                          className="block text-base text-muted-foreground hover:text-brown transition-smooth py-1"
-                        >
-                          {collection.name}
-                        </Link>
-                      ))}
-                    </div>
-                  </div>
-                </nav>
-              </SheetContent>
-            </Sheet>
+            {/* Mobile menu button */}
+            <Button
+              variant="ghost"
+              size="icon"
+              className="md:hidden"
+              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            >
+              {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+            </Button>
           </div>
         </div>
+
+        {/* Mobile Navigation */}
+        {mobileMenuOpen && (
+          <div className="md:hidden py-4 border-t border-border">
+            <nav className="flex flex-col space-y-4">
+              {navItems.map((item) => (
+                <Link
+                  key={item.name}
+                  to={item.href}
+                  className="text-sm font-medium text-foreground hover:text-brown transition-smooth"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {item.name}
+                </Link>
+              ))}
+              <Link
+                to="/collections"
+                className="text-sm font-medium text-foreground hover:text-brown transition-smooth"
+                onClick={() => setMobileMenuOpen(false)}
+              >
+                All Collections
+              </Link>
+              {categories.map((category) => (
+                <Link
+                  key={category._id}
+                  to={`/collections?category=${category.slug}`}
+                  className="text-sm text-muted-foreground hover:text-brown transition-smooth pl-4"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  {category.name} Knives
+                </Link>
+              ))}
+            </nav>
+          </div>
+        )}
       </div>
     </header>
   );

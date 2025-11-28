@@ -45,10 +45,11 @@ interface Product {
   reviews: Review[];
   specifications?: {
     bladeLength?: string;
-    handleMaterial?: string;
-    bladeMaterial?: string;
+    handleLength?: string;
     totalLength?: string;
     weight?: string;
+    bladeFinish?: string;
+    handleMaterial?: string;
   };
   metaTitle?: string;
   metaDescription?: string;
@@ -173,7 +174,6 @@ const ProductDetails = () => {
           description: 'Thank you for your review!',
         });
         setReviewForm({ rating: 0, comment: '' });
-        // Refresh product data to show new review
         window.location.reload();
       } else {
         throw new Error('Failed to submit review');
@@ -208,6 +208,42 @@ const ProductDetails = () => {
         </span>
       </div>
     );
+  };
+
+  // Filter relevant specifications
+  const getRelevantSpecs = (specs: any) => {
+    if (!specs) return null;
+    
+    const relevantKeys = [
+      'bladeLength',
+      'handleLength', 
+      'totalLength',
+      'weight',
+      'bladeFinish',
+      'handleMaterial'
+    ];
+    
+    const filtered: Record<string, any> = {};
+    relevantKeys.forEach(key => {
+      if (specs[key]) {
+        filtered[key] = specs[key];
+      }
+    });
+    
+    return Object.keys(filtered).length > 0 ? filtered : null;
+  };
+
+  // Format spec label
+  const formatSpecLabel = (key: string): string => {
+    const labels: Record<string, string> = {
+      bladeLength: 'Blade Length',
+      handleLength: 'Handle Length',
+      totalLength: 'Total Length',
+      weight: 'Weight',
+      bladeFinish: 'Blade Finish',
+      handleMaterial: 'Handle Material'
+    };
+    return labels[key] || key;
   };
 
   // Loading state
@@ -248,19 +284,19 @@ const ProductDetails = () => {
     );
   }
 
-  // Safe data extraction
   const categoryName = typeof product.category === 'object' 
     ? product.category.name 
     : product.category;
 
   const mainImages = product.images.length > 0 ? product.images : [product.image];
+  const relevantSpecs = getRelevantSpecs(product.specifications);
 
   return (
     <div className="min-h-screen bg-background">
       <Header />
       
       <div className="container mx-auto px-4 py-8">
-        {/* Breadcrumb Navigation */}
+        {/* Breadcrumb */}
         <nav className="flex items-center space-x-2 text-sm text-muted-foreground mb-6">
           <Button variant="ghost" onClick={() => navigate('/')} className="p-0 h-auto">
             Home
@@ -273,39 +309,44 @@ const ProductDetails = () => {
           <span className="text-foreground">{product.name}</span>
         </nav>
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-12">
-          {/* Product Images */}
-          <div>
-            <div className="rounded-lg overflow-hidden mb-4 bg-gray-50">
+        {/* MAIN PRODUCT SECTION - Image Left, Details Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 mb-16">
+          
+          {/* LEFT: Product Images - SMALLER & FITS PERFECTLY */}
+          <div className="space-y-4">
+            {/* Main Image - Smaller, contained */}
+            <div className="rounded-xl overflow-hidden bg-gray-50 border border-border">
               <img
                 src={mainImages[activeImage]}
                 alt={product.name}
-                className="w-full h-96 object-cover"
+                className="w-full h-[400px] object-contain p-6"
                 onError={(e) => {
                   const target = e.target as HTMLImageElement;
-                  target.src = '/api/placeholder/600/400';
+                  target.src = 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=600&h=400&fit=crop';
                 }}
               />
             </div>
             
-            {/* Image Thumbnails */}
+            {/* Thumbnails */}
             {mainImages.length > 1 && (
-              <div className="grid grid-cols-4 gap-2">
+              <div className="grid grid-cols-5 gap-2">
                 {mainImages.map((img, index) => (
                   <button
                     key={index}
                     onClick={() => setActiveImage(index)}
-                    className={`rounded border-2 overflow-hidden ${
-                      activeImage === index ? 'border-brown' : 'border-transparent'
+                    className={`rounded-lg border-2 overflow-hidden transition-all ${
+                      activeImage === index 
+                        ? 'border-brown ring-2 ring-brown ring-opacity-50' 
+                        : 'border-gray-200 hover:border-brown'
                     }`}
                   >
                     <img
                       src={img}
-                      alt={`${product.name} view ${index + 1}`}
-                      className="w-full h-20 object-cover"
+                      alt={`View ${index + 1}`}
+                      className="w-full h-16 object-cover"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        target.src = '/api/placeholder/100/80';
+                        target.src = 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=100&h=100&fit=crop';
                       }}
                     />
                   </button>
@@ -314,16 +355,19 @@ const ProductDetails = () => {
             )}
           </div>
 
-          {/* Product Information */}
+          {/* RIGHT: Product Info + Description + Specs */}
           <div className="space-y-6">
+            {/* Product Header */}
             <div>
-              <Badge variant="outline" className="mb-4">
+              <Badge variant="outline" className="mb-3 border-brown text-brown">
                 {categoryName || 'Uncategorized'}
               </Badge>
               
-              <h1 className="text-3xl font-bold mb-2">{product.name}</h1>
+              <h1 className="text-3xl lg:text-4xl font-bold mb-3 text-foreground">
+                {product.name}
+              </h1>
               
-              {/* Rating and Reviews */}
+              {/* Rating */}
               <div className="flex items-center mb-4">
                 {renderRating(product.rating)}
                 <span className="ml-2 text-sm text-muted-foreground">
@@ -331,27 +375,29 @@ const ProductDetails = () => {
                 </span>
               </div>
 
-              <p className="text-3xl font-bold text-brown mb-6">${product.price}</p>
+              <p className="text-3xl lg:text-4xl font-bold text-brown mb-6">
+                ${product.price.toFixed(2)}
+              </p>
 
               {/* Stock Status */}
-              <div className="flex items-center mb-6">
+              <div className="mb-6">
                 {product.countInStock > 0 ? (
-                  <div className="flex items-center text-green-600">
+                  <div className="inline-flex items-center text-green-600 bg-green-50 px-4 py-2 rounded-lg">
                     <CheckCircle2 className="h-5 w-5 mr-2" />
-                    <span>In Stock ({product.countInStock} available)</span>
+                    <span className="font-medium">In Stock ({product.countInStock} available)</span>
                   </div>
                 ) : (
-                  <div className="flex items-center text-red-600">
-                    <span>Out of Stock</span>
+                  <div className="inline-flex items-center text-red-600 bg-red-50 px-4 py-2 rounded-lg">
+                    <span className="font-medium">Out of Stock</span>
                   </div>
                 )}
               </div>
 
-              {/* Add to Cart */}
+              {/* Add to Cart Button */}
               <Button 
                 onClick={handleAddToCart}
                 disabled={product.countInStock === 0}
-                className="w-full py-6 text-lg mb-6"
+                className="w-full py-6 text-lg mb-6 bg-brown hover:bg-brown/90"
                 size="lg"
               >
                 <ShoppingCart className="mr-2 h-5 w-5" />
@@ -359,80 +405,112 @@ const ProductDetails = () => {
               </Button>
 
               {/* Features */}
-              <div className="grid grid-cols-2 gap-4 text-sm">
+              <div className="grid grid-cols-2 gap-3 p-4 bg-muted/30 rounded-lg border border-border mb-6">
                 <div className="flex items-center">
-                  <Truck className="h-4 w-4 mr-2 text-brown" />
-                  <span>Free Shipping</span>
+                  <Truck className="h-5 w-5 mr-2 text-brown flex-shrink-0" />
+                  <span className="text-sm font-medium">Free Shipping</span>
                 </div>
                 <div className="flex items-center">
-                  <Shield className="h-4 w-4 mr-2 text-brown" />
-                  <span>2-Year Warranty</span>
+                  <Shield className="h-5 w-5 mr-2 text-brown flex-shrink-0" />
+                  <span className="text-sm font-medium">2-Year Warranty</span>
                 </div>
               </div>
             </div>
+
+            {/* Description */}
+            <div className="border-t border-border pt-6">
+              <h3 className="text-xl font-bold mb-3 text-foreground">Description</h3>
+              <p className="text-muted-foreground leading-relaxed">
+                {product.description}
+              </p>
+            </div>
+
+            {/* Specifications */}
+            {relevantSpecs && (
+              <div className="border-t border-border pt-6">
+                <h3 className="text-xl font-bold mb-4 text-foreground">Specifications</h3>
+                <div className="space-y-3">
+                  {Object.entries(relevantSpecs).map(([key, value]) => (
+                    <div 
+                      key={key} 
+                      className="flex justify-between items-center py-2 border-b border-border last:border-0"
+                    >
+                      <span className="font-medium text-foreground">
+                        {formatSpecLabel(key)}
+                      </span>
+                      <span className="text-muted-foreground font-medium">
+                        {String(value)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         </div>
 
-        {/* Product Details Tabs */}
-        <Tabs defaultValue="description" className="mb-12">
-          <TabsList className="grid w-full grid-cols-3">
-            <TabsTrigger value="description">Description</TabsTrigger>
-            <TabsTrigger value="specifications">Specifications</TabsTrigger>
-            <TabsTrigger value="reviews">
-              Reviews ({product.reviews.length})
-            </TabsTrigger>
-          </TabsList>
+        {/* REVIEWS SECTION - FULL WIDTH BELOW - BACKGROUND COLOR MATCH */}
+        <div className="border-t border-border pt-12">
+          <h2 className="text-3xl font-bold mb-8 text-foreground">Customer Reviews</h2>
+          
+          <Tabs defaultValue="all" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 mb-8 bg-muted">
+              <TabsTrigger value="all" className="data-[state=active]:bg-background">
+                All Reviews ({product.reviews.length})
+              </TabsTrigger>
+              <TabsTrigger value="write" className="data-[state=active]:bg-background">
+                Write a Review
+              </TabsTrigger>
+            </TabsList>
 
-          <TabsContent value="description" className="space-y-4">
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Product Description</h3>
-                <div className="prose max-w-none">
-                  <p className="text-gray-600 leading-relaxed">{product.description}</p>
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
-
-          <TabsContent value="specifications">
-            <Card>
-              <CardContent className="p-6">
-                <h3 className="text-xl font-semibold mb-4">Specifications</h3>
-                <div className="grid md:grid-cols-2 gap-4">
-                  {product.specifications && Object.entries(product.specifications).map(([key, value]) => (
-                    value && (
-                      <div key={key} className="flex justify-between border-b pb-2">
-                        <span className="font-medium capitalize">
-                          {key.replace(/([A-Z])/g, ' $1').trim()}:
+            <TabsContent value="all" className="space-y-4">
+              {product.reviews.length > 0 ? (
+                product.reviews.map((review) => (
+                  <Card key={review._id} className="bg-background border-border">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between mb-3">
+                        <div>
+                          <div className="flex items-center mb-2">
+                            {renderRating(review.rating)}
+                          </div>
+                          <p className="font-semibold text-foreground">{review.name}</p>
+                        </div>
+                        <span className="text-sm text-muted-foreground">
+                          {new Date(review.createdAt).toLocaleDateString()}
                         </span>
-                        <span>{value}</span>
                       </div>
-                    )
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          </TabsContent>
+                      <p className="text-muted-foreground leading-relaxed">{review.comment}</p>
+                    </CardContent>
+                  </Card>
+                ))
+              ) : (
+                <Card className="bg-background border-border">
+                  <CardContent className="p-12 text-center">
+                    <p className="text-muted-foreground text-lg">
+                      No reviews yet. Be the first to review this product!
+                    </p>
+                  </CardContent>
+                </Card>
+              )}
+            </TabsContent>
 
-          <TabsContent value="reviews">
-            <div className="space-y-6">
-              {/* Review Form */}
-              <Card>
-                <CardContent className="p-6">
-                  <h3 className="text-xl font-semibold mb-4">Write a Review</h3>
-                  <form onSubmit={handleSubmitReview} className="space-y-4">
+            <TabsContent value="write">
+              <Card className="bg-background border-border">
+                <CardContent className="p-8">
+                  <h3 className="text-xl font-semibold mb-6 text-foreground">Write Your Review</h3>
+                  <form onSubmit={handleSubmitReview} className="space-y-6">
                     <div>
-                      <label className="block text-sm font-medium mb-2">Rating</label>
-                      <div className="flex space-x-1">
+                      <label className="block text-sm font-medium mb-3 text-foreground">Your Rating</label>
+                      <div className="flex space-x-2">
                         {[1, 2, 3, 4, 5].map((star) => (
                           <button
                             key={star}
                             type="button"
                             onClick={() => setReviewForm(prev => ({ ...prev, rating: star }))}
-                            className="p-1"
+                            className="p-1 hover:scale-110 transition-transform"
                           >
                             <Star
-                              className={`h-6 w-6 ${
+                              className={`h-8 w-8 ${
                                 star <= reviewForm.rating
                                   ? 'text-yellow-400 fill-current'
                                   : 'text-gray-300'
@@ -443,60 +521,33 @@ const ProductDetails = () => {
                       </div>
                     </div>
                     <div>
-                      <label htmlFor="comment" className="block text-sm font-medium mb-2">
-                        Comment
+                      <label htmlFor="comment" className="block text-sm font-medium mb-2 text-foreground">
+                        Your Review
                       </label>
                       <Textarea
                         id="comment"
                         value={reviewForm.comment}
                         onChange={(e) => setReviewForm(prev => ({ ...prev, comment: e.target.value }))}
                         placeholder="Share your experience with this product..."
-                        rows={4}
+                        rows={6}
                         required
+                        className="resize-none bg-background"
                       />
                     </div>
-                    <Button type="submit" disabled={submittingReview}>
+                    <Button 
+                      type="submit" 
+                      disabled={submittingReview}
+                      className="bg-brown hover:bg-brown/90 w-full sm:w-auto"
+                      size="lg"
+                    >
                       {submittingReview ? 'Submitting...' : 'Submit Review'}
                     </Button>
                   </form>
                 </CardContent>
               </Card>
-
-              {/* Reviews List */}
-              <div className="space-y-4">
-                <h3 className="text-xl font-semibold">Customer Reviews</h3>
-                {product.reviews.length > 0 ? (
-                  product.reviews.map((review) => (
-                    <Card key={review._id}>
-                      <CardContent className="p-6">
-                        <div className="flex items-start justify-between mb-2">
-                          <div>
-                            <div className="flex items-center mb-1">
-                              {renderRating(review.rating)}
-                            </div>
-                            <p className="font-medium">{review.name}</p>
-                          </div>
-                          <span className="text-sm text-muted-foreground">
-                            {new Date(review.createdAt).toLocaleDateString()}
-                          </span>
-                        </div>
-                        <p className="text-gray-600">{review.comment}</p>
-                      </CardContent>
-                    </Card>
-                  ))
-                ) : (
-                  <Card>
-                    <CardContent className="p-6 text-center">
-                      <p className="text-muted-foreground">
-                        No reviews yet. Be the first to review this product!
-                      </p>
-                    </CardContent>
-                  </Card>
-                )}
-              </div>
-            </div>
-          </TabsContent>
-        </Tabs>
+            </TabsContent>
+          </Tabs>
+        </div>
       </div>
       
       <Footer />
