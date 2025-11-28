@@ -14,7 +14,9 @@ const userSchema = mongoose.Schema(
       postalCode: String,
       country: String
     },
-    isVerified: { type: Boolean, default: false }
+    isVerified: { type: Boolean, default: false },
+    resetPasswordToken: String,
+    resetPasswordExpire: Date
   },
   { timestamps: true }
 );

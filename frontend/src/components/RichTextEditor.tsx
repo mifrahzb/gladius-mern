@@ -17,7 +17,7 @@ interface RichTextEditorProps {
 const RichTextEditor: React.FC<RichTextEditorProps> = ({
   value,
   onChange,
-  label = 'Description',
+  label = 'Description *',
   placeholder = 'Enter product description...',
   error,
   required = false,

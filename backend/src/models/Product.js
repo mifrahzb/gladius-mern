@@ -48,27 +48,14 @@ const productSchema = new mongoose.Schema({
     unique: true,
   },
   
-  // ✅ ADD: Top-level specification fields from seed data
-  sku: String,
-  handle: String,
-  blade: String,
-  lengthBlade: String,
-  lengthHandle: String,
-  packageWeight: Number,
-  casing: String,
-  finishing: String,
-  material: String,
-  bladeLength: String,
-  
-  // Nested specifications object (for additional specs)
+  // ONLY RELEVANT KNIFE SPECIFICATIONS
   specifications: {
     bladeLength: String,
-    handleMaterial: String,
-    bladeMaterial: String,
+    handleLength: String,
     totalLength: String,
     weight: String,
-    hardness: String,
-    origin: String
+    bladeFinish: String,
+    handleMaterial: String,
   },
   
   isFeatured: {

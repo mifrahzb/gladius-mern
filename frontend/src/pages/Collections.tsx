@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -8,11 +9,10 @@ import Header from '@/components/Header';
 import Footer from '@/components/Footer';
 import gladiusLogo from '@/assets/gladius-logo.png';
 import heroBackground from '@/assets/hero-background.jpg';
-import { productsApi } from '@/lib/api';
 import { useToast } from '@/hooks/use-toast';
-import { useNavigate } from 'react-router-dom';
 
 const Collections = () => {
+  const [searchParams, setSearchParams] = useSearchParams();
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
@@ -24,44 +24,32 @@ const Collections = () => {
   const { toast } = useToast();
   const navigate = useNavigate();
 
-  // ADD THIS FUNCTION
   const getProductImageUrl = (product: any): string => {
-  if (product.images && Array.isArray(product.images) && product.images.length > 0) {
-    const firstImage = product.images[0];
-    
-    // Handle object with url property
-    if (typeof firstImage === 'object' && firstImage !== null) {
-      // Check if it's a broken character array
-      if (typeof firstImage[0] === 'string') {
-        // Reconstruct the URL from character array
-        const url = Object.values(firstImage).join('');
-        console.log('✅ Reconstructed URL:', url);
-        return url;
+    if (product.images && Array.isArray(product.images) && product.images.length > 0) {
+      const firstImage = product.images[0];
+      
+      if (typeof firstImage === 'object' && firstImage !== null) {
+        if (typeof firstImage[0] === 'string') {
+          const url = Object.values(firstImage).join('');
+          return url;
+        }
+        
+        if (firstImage.url) {
+          return firstImage.url;
+        }
       }
       
-      if (firstImage.url) {
-        console.log('✅ Using images[0].url:', firstImage.url);
-        return firstImage.url;
+      if (typeof firstImage === 'string') {
+        return firstImage;
       }
     }
     
-    // Handle normal string
-    if (typeof firstImage === 'string') {
-      console.log('✅ Using images[0] string:', firstImage);
-      return firstImage;
+    if (product.image && typeof product.image === 'string') {
+      return product.image;
     }
-  }
-  
-  // Try image field
-  if (product.image && typeof product.image === 'string') {
-    console.log('✅ Using image field:', product.image);
-    return product.image;
-  }
-  
-  // Fallback
-  console.log('⚠️ Using fallback image');
-  return 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
-};
+    
+    return 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
+  };
 
   // Fetch categories from backend
   const fetchCategories = async () => {
@@ -79,16 +67,11 @@ const Collections = () => {
     try {
       setLoading(true);
       
-      // Build the API URL based on selected category
       let apiUrl = '/api/products';
       const params = new URLSearchParams();
       
       if (selectedCategory !== 'all') {
-        // Find the category by name to get its ID
-        const category = categories.find(cat => 
-          cat.name.toLowerCase() === selectedCategory.toLowerCase() || 
-          cat.slug === selectedCategory
-        );
+        const category = categories.find(cat => cat.slug === selectedCategory);
         if (category) {
           params.append('category', category._id);
         }
@@ -108,11 +91,9 @@ const Collections = () => {
       const response = await fetch(apiUrl);
       const data = await response.json();
       
-      // Handle both response formats
       const productsData = data?.products || data || [];
       setKnives(Array.isArray(productsData) ? productsData : []);
       
-      // Set pagination if available
       if (data?.pages) {
         setTotalPages(data.pages);
       } else if (data?.totalPages) {
@@ -130,6 +111,14 @@ const Collections = () => {
       setLoading(false);
     }
   };
+
+  // Handle URL parameters
+  useEffect(() => {
+    const categoryParam = searchParams.get('category');
+    if (categoryParam) {
+      setSelectedCategory(categoryParam);
+    }
+  }, [searchParams]);
 
   // Fetch categories on mount
   useEffect(() => {
@@ -158,6 +147,11 @@ const Collections = () => {
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setCurrentPage(1);
+    if (category === 'all') {
+      setSearchParams({});
+    } else {
+      setSearchParams({ category });
+    }
   };
 
   const handlePageChange = (page: number) => {
@@ -165,11 +159,10 @@ const Collections = () => {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // Build categories for filter buttons
   const categoryFilters = [
     { id: 'all', name: 'All Knives' },
     ...categories.map(cat => ({
-      id: cat.slug || cat.name.toLowerCase(),
+      id: cat.slug,
       name: `${cat.name} Knives`
     }))
   ];
@@ -227,9 +220,10 @@ const Collections = () => {
             {categoryFilters.map((category) => (
               <Button
                 key={category.id}
-                variant={selectedCategory === category.id ? "cta" : "outline"}
+                variant={selectedCategory === category.id ? "default" : "outline"}
                 size="sm"
                 onClick={() => handleCategoryChange(category.id)}
+                className={selectedCategory === category.id ? "bg-brown hover:bg-brown/90" : ""}
               >
                 {category.name}
               </Button>
@@ -239,16 +233,18 @@ const Collections = () => {
           {/* View Mode Toggle */}
           <div className="flex items-center space-x-2">
             <Button
-              variant={viewMode === 'grid' ? "cta" : "outline"}
+              variant={viewMode === 'grid' ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode('grid')}
+              className={viewMode === 'grid' ? "bg-brown hover:bg-brown/90" : ""}
             >
               <Grid3X3 className="h-4 w-4" />
             </Button>
             <Button
-              variant={viewMode === 'list' ? "cta" : "outline"}
+              variant={viewMode === 'list' ? "default" : "outline"}
               size="sm"
               onClick={() => setViewMode('list')}
+              className={viewMode === 'list' ? "bg-brown hover:bg-brown/90" : ""}
             >
               <List className="h-4 w-4" />
             </Button>
@@ -281,7 +277,7 @@ const Collections = () => {
               {knives.map((knife) => (
                 <Card 
                   key={knife._id} 
-                  className="group cursor-pointer..."
+                  className="group cursor-pointer hover:shadow-premium-hover transition-premium overflow-hidden"
                   onClick={() => {
                     const categorySlug = knife.category?.slug || 'knives';
                     navigate(`/product/${categorySlug}/${knife.slug}`);
@@ -299,7 +295,6 @@ const Collections = () => {
                       className="w-full h-48 object-cover transition-premium group-hover:scale-105"
                       onError={(e) => {
                         const target = e.target as HTMLImageElement;
-                        console.error('❌ Image failed to load:', target.src);
                         target.src = 'https://images.unsplash.com/photo-1595435742656-5272d0b3e8f8?w=400&h=300&fit=crop';
                       }}
                     />
@@ -313,7 +308,7 @@ const Collections = () => {
                     
                     <div className="flex items-center justify-between mb-4">
                       <span className="text-2xl font-bold text-brown">${knife.price}</span>
-                      {knife.rating && (
+                      {knife.rating > 0 && (
                         <div className="flex items-center">
                           <span className="text-sm text-brown font-medium">⭐ {knife.rating}</span>
                         </div>
@@ -321,8 +316,8 @@ const Collections = () => {
                     </div>
 
                     <Button 
-                      variant="steel" 
-                      className="w-full group"
+                      variant="default" 
+                      className="w-full group bg-brown hover:bg-brown/90"
                       disabled={knife.countInStock === 0}
                     >
                       {knife.countInStock > 0 ? 'View Details' : 'Out of Stock'}
@@ -348,9 +343,10 @@ const Collections = () => {
                 {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
                   <Button
                     key={page}
-                    variant={currentPage === page ? "cta" : "outline"}
+                    variant={currentPage === page ? "default" : "outline"}
                     size="sm"
                     onClick={() => handlePageChange(page)}
+                    className={currentPage === page ? "bg-brown hover:bg-brown/90" : ""}
                   >
                     {page}
                   </Button>
