@@ -7,7 +7,9 @@ import {
   ShoppingCart, 
   Users, 
   LogOut,
-  Box
+  Box,
+  Sparkles, // NEW
+  TrendingUp // NEW
 } from 'lucide-react';
 import { useEffect } from 'react';
 import { useAuth } from '@/hooks/useAuth';
@@ -24,7 +26,6 @@ const AdminDashboard = () => {
     }
   }, [isAuthenticated, loading, navigate]);
 
-  // Show loading state while checking auth
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center">
@@ -33,13 +34,11 @@ const AdminDashboard = () => {
     );
   }
 
-  // Redirect if not authenticated
   if (!isAuthenticated) {
     return null;
   }
 
-  // Check if user is admin
-  if (!isAdmin) {
+  if (! isAdmin) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">
@@ -56,8 +55,10 @@ const AdminDashboard = () => {
   };
 
   const navItems = [
-    { path: '/admin/dashboard', label: 'Overview', icon: LayoutDashboard },
+    { path: '/admin/dashboard', label:  'Overview', icon: LayoutDashboard },
     { path: '/admin/dashboard/products', label: 'Products', icon: Package },
+    { path: '/admin/dashboard/ai-content', label: 'AI Content', icon: Sparkles }, // NEW
+    { path: '/admin/dashboard/analytics', label: 'Analytics', icon: TrendingUp }, // NEW
     { path: '/admin/dashboard/orders', label: 'Orders', icon: ShoppingCart },
     { path: '/admin/dashboard/inventory', label: 'Inventory', icon: Box },
     { path: '/admin/dashboard/customers', label: 'Customers', icon: Users },
@@ -84,7 +85,7 @@ const AdminDashboard = () => {
                 <li key={item.path}>
                   <Link to={item.path}>
                     <Button
-                      variant={isActive ? "secondary" : "ghost"}
+                      variant={isActive ?  "secondary" : "ghost"}
                       className={cn(
                         "w-full justify-start",
                         isActive && "bg-primary text-primary-foreground hover:bg-primary/90"

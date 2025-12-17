@@ -1,3 +1,4 @@
+// SEO.tsx
 import { Helmet } from 'react-helmet-async';
 
 interface SEOProps {
@@ -6,92 +7,55 @@ interface SEOProps {
   keywords?: string[];
   image?: string;
   url?: string;
-  type?: 'website' | 'product' | 'article';
-  structuredData?: object;
-  canonicalUrl?: string;
+  type?: string;
+  schema?: any;
 }
 
 const SEO = ({ 
-  title, 
-  description, 
-  keywords = [],
-  image = '/og-image.jpg', // Default OG image
+  title = 'Gladius Traders - Premium Handcrafted Knives',
+  description = 'Discover premium handcrafted knives from Wazirabad, Pakistan. Professional chef knives, Damascus steel blades, and traditional cutlery.',
+  keywords = ['knives', 'chef knives', 'damascus steel', 'handcrafted knives', 'professional cutlery'],
+  image = '/og-image.jpg',
   url,
   type = 'website',
-  structuredData,
-  canonicalUrl
+  schema
 }: SEOProps) => {
-  const siteName = 'Gladius Traders';
-  const defaultTitle = 'Gladius Traders - Handcrafted Knives from Wazirabad, Pakistan';
-  const defaultDescription = 'Premium handcrafted knives made by master craftsmen in Wazirabad, Pakistan. Hunting, chef, bushcraft, and custom knives with traditional craftsmanship.';
-  
-  const siteUrl = import.meta.env.VITE_SITE_URL || 'https://gladiustraders.com';
-  const fullUrl = url ? `${siteUrl}${url}` : siteUrl;
-  const fullImageUrl = image.startsWith('http') ? image : `${siteUrl}${image}`;
-  
-  const finalTitle = title ? `${title} | ${siteName}` : defaultTitle;
-  const finalDescription = description || defaultDescription;
+  const siteUrl = window.location.origin;
+  const fullUrl = url ?  `${siteUrl}${url}` : window.location.href;
+  const fullImage = image.startsWith('http') ? image : `${siteUrl}${image}`;
 
   return (
     <Helmet>
       {/* Basic Meta Tags */}
-      <title>{finalTitle}</title>
-      <meta name="description" content={finalDescription} />
-      {keywords.length > 0 && (
-        <meta name="keywords" content={keywords.join(', ')} />
-      )}
+      <title>{title}</title>
+      <meta name="description" content={description} />
+      {keywords.length > 0 && <meta name="keywords" content={keywords.join(', ')} />}
       
       {/* Canonical URL */}
-      {canonicalUrl && <link rel="canonical" href={canonicalUrl} />}
+      <link rel="canonical" href={fullUrl} />
       
-      {/* Open Graph / Facebook */}
+      {/* Open Graph */}
       <meta property="og:type" content={type} />
+      <meta property="og:title" content={title} />
+      <meta property="og:description" content={description} />
+      <meta property="og:image" content={fullImage} />
       <meta property="og:url" content={fullUrl} />
-      <meta property="og:title" content={finalTitle} />
-      <meta property="og:description" content={finalDescription} />
-      <meta property="og:image" content={fullImageUrl} />
-      <meta property="og:site_name" content={siteName} />
+      <meta property="og:site_name" content="Gladius Traders" />
       
       {/* Twitter Card */}
       <meta name="twitter:card" content="summary_large_image" />
-      <meta name="twitter:url" content={fullUrl} />
-      <meta name="twitter:title" content={finalTitle} />
-      <meta name="twitter:description" content={finalDescription} />
-      <meta name="twitter:image" content={fullImageUrl} />
+      <meta name="twitter:title" content={title} />
+      <meta name="twitter:description" content={description} />
+      <meta name="twitter:image" content={fullImage} />
       
-      {/* Additional SEO Tags */}
-      <meta name="robots" content="index, follow" />
-      <meta name="googlebot" content="index, follow" />
-      <meta name="author" content={siteName} />
-      
-      {/* Structured Data */}
-      {structuredData && (
+      {/* JSON-LD Schema */}
+      {schema && (
         <script type="application/ld+json">
-          {JSON.stringify(structuredData)}
+          {JSON.stringify(schema)}
         </script>
       )}
-      
-      {/* Organization Schema - Always include */}
-      <script type="application/ld+json">
-        {JSON.stringify({
-          "@context": "https://schema.org",
-          "@type": "Organization",
-          "name": siteName,
-          "url": siteUrl,
-          "logo": `${siteUrl}/logo.png`,
-          "description": defaultDescription,
-          "address": {
-            "@type": "PostalAddress",
-            "addressLocality": "Wazirabad",
-            "addressCountry": "Pakistan"
-          },
-          "sameAs": [
-            // Add your social media URLs here
-          ]
-        })}
-      </script>
     </Helmet>
   );
 };
 
-export default SEO;
+export default SEO; // Change to default export
