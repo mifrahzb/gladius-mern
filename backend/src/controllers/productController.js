@@ -103,7 +103,6 @@ export const getProductBySlug = asyncHandler(async (req, res) => {
 export const getProductByCategoryAndSlug = asyncHandler(async (req, res) => {
   const { categorySlug, productSlug } = req.params;
   
-  // Find category first
   const category = await Category.findOne({ slug: categorySlug });
   
   if (!category) {
@@ -111,16 +110,24 @@ export const getProductByCategoryAndSlug = asyncHandler(async (req, res) => {
     throw new Error('Category not found');
   }
   
-  // Find product with matching slug and category
   const product = await Product.findOne({ 
     slug: productSlug,
     category: category._id
   }).populate('category', 'name slug metaTitle metaDescription');
 
   if (product) {
-    res.json(product);
+    // Include structured data in response
+    const response = {
+      ...product.toObject(),
+      structuredData: {
+        productSchema: product.productSchema,
+        faqSchema: product.faqSchema
+      }
+    };
+    
+    res.json(response);
   } else {
-    res.status(404);
+    res. status(404);
     throw new Error('Product not found');
   }
 });
