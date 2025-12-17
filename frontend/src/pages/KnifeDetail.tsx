@@ -5,7 +5,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Textarea } from '@/components/ui/textarea';
-import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ArrowRight, CheckCircle2, ArrowLeft } from 'lucide-react';
+import { Star, ShoppingCart, Heart, Share2, Truck, Shield, RotateCcw, ArrowRight, CheckCircle2, ArrowLeft, Sparkles } from 'lucide-react';
 import { useCart } from '@/hooks/useCart';
 import { useAuth } from '@/hooks/useAuth';
 import { reviewsApi } from '@/lib/api';
@@ -67,9 +67,7 @@ const KnifeDetail = () => {
         setLoading(true);
         setError(null);
         
-        // FIXED: Remove duplicate /api - check if API_URL already has /api
-        const baseUrl = API_URL.endsWith('/api') ? API_URL.replace(/\/api$/, '') : API_URL;
-        const url = `${baseUrl}/api/products/${categorySlug}/${productSlug}`;
+        const url = `${API_URL}/products/${categorySlug}/${productSlug}`;
         console.log('Fetching product from:', url);
         
         const response = await fetch(url);
@@ -164,7 +162,7 @@ const KnifeDetail = () => {
 
     setSubmittingReview(true);
     try {
-      const response = await fetch(`/api/reviews`, {
+      const response = await fetch(`${API_URL}/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -270,39 +268,7 @@ const KnifeDetail = () => {
     return specs;
   };
 
-  const getStructuredData = () => {
-    if (!knife) return null;
-
-    return {
-      "@context": "https://schema.org/",
-      "@type": "Product",
-      "name": knife.name,
-      "image": knife.images?.map((img: any) => getImageUrl(img)) || [],
-      "description": knife.description,
-      "sku": knife._id,
-      "brand": {
-        "@type": "Brand",
-        "name": knife.brand || "Gladius Traders"
-      },
-      "offers": {
-        "@type": "Offer",
-        "url": window.location.href,
-        "priceCurrency": "USD",
-        "price": knife.price,
-        "availability": knife.countInStock > 0 
-          ? "https://schema.org/InStock" 
-          : "https://schema.org/OutOfStock",
-        "itemCondition": "https://schema.org/NewCondition"
-      },
-      "aggregateRating": knife.rating > 0 ? {
-        "@type": "AggregateRating",
-        "ratingValue": knife.rating,
-        "reviewCount": knife.numReviews
-      } : undefined
-    };
-  };
-
-  // Loading State - New improved loading UI
+  // Loading State
   if (loading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -314,7 +280,7 @@ const KnifeDetail = () => {
     );
   }
 
-  // Error State - New improved error UI
+  // Error State
   if (error || !knife) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center p-4">
@@ -380,17 +346,17 @@ const KnifeDetail = () => {
         <meta name="twitter:description" content={knife.metaDescription} />
         <meta name="twitter:image" content={getImageUrl(knife.images?.[0])} />
         
-        {/* Product Schema (JSON-LD) */}
-        {knife.structuredData?.productSchema && (
+        {/* FIXED: Product Schema (JSON-LD) - Use productSchema field directly */}
+        {knife.productSchema && (
           <script type="application/ld+json">
-            {JSON.stringify(knife.structuredData.productSchema)}
+            {JSON.stringify(knife.productSchema)}
           </script>
         )}
         
-        {/* FAQ Schema (JSON-LD) */}
-        {knife.structuredData?.faqSchema && (
+        {/* FIXED: FAQ Schema (JSON-LD) - Use faqSchema field directly */}
+        {knife.faqSchema && (
           <script type="application/ld+json">
-            {JSON.stringify(knife.structuredData.faqSchema)}
+            {JSON.stringify(knife.faqSchema)}
           </script>
         )}
         
@@ -401,15 +367,15 @@ const KnifeDetail = () => {
             "@type": "BreadcrumbList",
             "itemListElement": [
               {
-                "@type":  "ListItem",
+                "@type": "ListItem",
                 "position": 1,
                 "name": "Home",
                 "item": window.location.origin
               },
               {
                 "@type": "ListItem",
-                "position":  2,
-                "name":  knife.category?.name || "Products",
+                "position": 2,
+                "name": knife.category?.name || "Products",
                 "item": `${window.location.origin}/collections`
               },
               {
@@ -431,7 +397,6 @@ const KnifeDetail = () => {
           image={getImageUrl(knife.images?.[0])}
           url={`/product/${categorySlug}/${knife.slug}`}
           type="product"
-          schema={getStructuredData()}
         />
 
         <Header />
@@ -453,9 +418,9 @@ const KnifeDetail = () => {
           {/* MAIN PRODUCT SECTION - Image Left, Info + Description + Specs Right */}
           <div className="grid lg:grid-cols-2 gap-12 mb-16">
             
-            {/* LEFT: Product Images - SMALLER, FITS PERFECTLY */}
+            {/* LEFT: Product Images */}
             <div className="space-y-4">
-              {/* Main Image - Smaller and contained */}
+              {/* Main Image */}
               <div className="rounded-xl overflow-hidden bg-gray-50 border border-border">
                 <img
                   src={getImageUrl(knife.images?.[selectedImage])}
@@ -617,22 +582,39 @@ const KnifeDetail = () => {
                 </div>
               </div>
 
-              {/* Description */}
+              {/* Description - FIXED: Shows AI content when approved */}
               <div className="border-t border-border pt-6">
-                <h3 className="text-xl font-bold mb-3 text-foreground">Description</h3>
-                {knife.richDescription ? (
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-xl font-bold text-foreground">Description</h3>
+                  {knife.aiApprovalStatus === 'approved' && (
+                    <Badge className="bg-gradient-to-r from-[#8B7355] to-[#6d5a43] text-white">
+                      <Sparkles className="w-3 h-3 mr-1" />
+                      AI-Enhanced
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* FIXED: Display AI-generated content when approved */}
+                {knife.aiApprovalStatus === 'approved' ? (
+                  // Display AI-generated description (now in knife.description field)
+                  <div className="text-muted-foreground leading-relaxed whitespace-pre-line">
+                    {knife.description}
+                  </div>
+                ) : knife.richDescription ? (
+                  // Fallback to rich description if available
                   <div 
-                    className="prose max-w-none text-muted-foreground"
+                    className="prose max-w-none text-muted-foreground leading-relaxed"
                     dangerouslySetInnerHTML={{ __html: knife.richDescription }}
                   />
                 ) : (
-                  <p className="text-muted-foreground leading-relaxed">
+                  // Fallback to plain description
+                  <div className="text-muted-foreground leading-relaxed whitespace-pre-line">
                     {knife.description}
-                  </p>
+                  </div>
                 )}
               </div>
 
-              {/* Specifications - ONLY RELEVANT ONES */}
+              {/* Specifications */}
               {relevantSpecs.length > 0 && (
                 <div className="border-t border-border pt-6">
                   <h3 className="text-xl font-bold mb-4 text-foreground">Specifications</h3>
@@ -649,10 +631,25 @@ const KnifeDetail = () => {
                   </div>
                 </div>
               )}
+
+              {/* AI-Generated FAQs - NEW */}
+              {knife.faqs && knife.faqs.length > 0 && (
+                <div className="border-t border-border pt-6">
+                  <h3 className="text-xl font-bold mb-4 text-foreground">Frequently Asked Questions</h3>
+                  <div className="space-y-4">
+                    {knife.faqs.map((faq: any, index: number) => (
+                      <div key={index} className="bg-muted/30 p-4 rounded-lg">
+                        <h4 className="font-semibold text-foreground mb-2">{faq.question}</h4>
+                        <p className="text-muted-foreground leading-relaxed">{faq.answer}</p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
-          {/* REVIEWS SECTION - FULL WIDTH BELOW, MATCHING BACKGROUND */}
+          {/* REVIEWS SECTION */}
           <div className="border-t border-border pt-12">
             <h2 className="text-3xl font-bold mb-8 text-foreground">Customer Reviews</h2>
             

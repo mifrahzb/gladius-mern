@@ -1,7 +1,26 @@
+import dotenv from 'dotenv';
+dotenv.config();
+
 import { GoogleGenerativeAI } from '@google/generative-ai';
 
 // Initialize Gemini AI
 const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+// Add right after imports in aiService.js:
+console.log('=== GEMINI API KEY DEBUG ===');
+console.log('Key exists:', !!process.env.GEMINI_API_KEY);
+console.log('Key length:', process.env.GEMINI_API_KEY?.length);
+console.log('Key preview:', process.env.GEMINI_API_KEY?.substring(0, 10) + '...');
+console.log('=== END DEBUG ===');
+
+// Test the key immediately
+try {
+  const testGenAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+  const testModel = testGenAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
+  console.log('✅ Gemini API initialized successfully');
+} catch (error) {
+  console.error('❌ Gemini API initialization failed:', error.message);
+}
 
 /**
  * FEATURE 1: AI-DRIVEN PRODUCT CONTENT OPTIMIZATION
@@ -9,7 +28,7 @@ const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
  */
 export const generateProductDescription = async (productData) => {
   try {
-    const model = genAI. getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const prompt = `You are an expert e-commerce copywriter specializing in knife products. Create a compelling, SEO-optimized product description. 
 
@@ -42,7 +61,7 @@ Return ONLY the description text, no headings or formatting.`;
     return text;
     
   } catch (error) {
-    console.error('❌ AI Description Error:', error. message);
+    console.error('❌ AI Description Error:', error.message);
     throw new Error(`AI generation failed: ${error.message}`);
   }
 };
@@ -53,13 +72,13 @@ Return ONLY the description text, no headings or formatting.`;
  */
 export const generateKeywords = async (productName, category, description) => {
   try {
-    const model = genAI. getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const prompt = `You are an SEO keyword research expert for e-commerce. Analyze this product and generate optimal keywords.
 
 Product: ${productName}
 Category: ${category}
-Description: ${description?. substring(0, 200)}
+Description: ${description?.substring(0, 200)}
 
 Generate 8-10 keywords with search intent classification: 
 
@@ -130,7 +149,7 @@ export const classifySearchIntent = (keyword) => {
  */
 export const generateImageAlt = async (productName, category, imageIndex = 0, imageContext = '') => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const viewTypes = [
       'product showcase',
@@ -220,7 +239,7 @@ export const categorizeImage = (imageUrl, productName) => {
  */
 export const generateMetaDescription = async (productName, description, category, price) => {
   try {
-    const model = genAI. getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI. getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const prompt = `Create an SEO-optimized meta description for a product page.
 
@@ -316,7 +335,7 @@ export const generateProductSchema = (product, categoryName) => {
  */
 export const generateFAQSchema = async (productName, category) => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const prompt = `Generate 5 common FAQs with answers for this product page (for FAQ Schema / SEO).
 
@@ -379,7 +398,7 @@ Generate FAQs:`;
  */
 export const generateBuyingGuide = async (categoryName, products = []) => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const productExamples = products.slice(0, 3).map(p => `- ${p.name} ($${p.price})`).join('\n');
     
@@ -447,7 +466,7 @@ Write the buying guide:`;
  */
 export const generateCategoryDescription = async (categoryName, productCount) => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const prompt = `Create an SEO-optimized category description for an e-commerce knife store.
 
@@ -483,7 +502,7 @@ Write the category description:`;
  */
 export const generateComparisonArticle = async (product1, product2) => {
   try {
-    const model = genAI.getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI.getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const prompt = `Create a detailed product comparison article for SEO and customer decision-making.
 
@@ -542,7 +561,7 @@ export const analyzeBehaviorPattern = (analyticsData) => {
     mostViewedProducts: getMostFrequent(productViews),
     clickHotspots: getMostFrequent(clickPatterns),
     abandonmentRate: (cartAbandonment.length / sessions.length * 100) || 0,
-    peakHours: getSeakHours(sessions),
+    peakHours: getPeakHours(sessions),
     recommendations: []
   };
   
@@ -602,7 +621,7 @@ function getPeakHours(sessions) {
  */
 export const generateSEORecommendations = async (productData) => {
   try {
-    const model = genAI. getGenerativeModel({ model: 'gemini-pro' });
+    const model = genAI. getGenerativeModel({ model: 'gemini-2.5-flash-lite' });
     
     const prompt = `Analyze this product's SEO and provide specific, actionable recommendations.
 

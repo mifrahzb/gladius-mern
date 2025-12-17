@@ -11,7 +11,7 @@ const getAuthHeader = () => {
 // AI Content Generation
 export const generateAIContent = async (productId: string) => {
   const { data } = await axios.post(
-    `${API_URL}/api/ai/generate/${productId}`,
+    `${API_URL}/ai/generate/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -20,7 +20,7 @@ export const generateAIContent = async (productId: string) => {
 
 export const approveAIContent = async (productId: string) => {
   const { data } = await axios.put(
-    `${API_URL}/api/ai/approve/${productId}`,
+    `${API_URL}/ai/approve/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -29,7 +29,7 @@ export const approveAIContent = async (productId: string) => {
 
 export const rejectAIContent = async (productId: string) => {
   const { data } = await axios.put(
-    `${API_URL}/api/ai/reject/${productId}`,
+    `${API_URL}/ai/reject/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -38,7 +38,7 @@ export const rejectAIContent = async (productId: string) => {
 
 export const regenerateAIContent = async (productId: string) => {
   const { data } = await axios.put(
-    `${API_URL}/api/ai/regenerate/${productId}`,
+    `${API_URL}/ai/regenerate/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -47,7 +47,7 @@ export const regenerateAIContent = async (productId: string) => {
 
 export const analyzeProduct = async (productId:  string) => {
   const { data } = await axios.get(
-    `${API_URL}/api/ai/analyze/${productId}`,
+    `${API_URL}/ai/analyze/${productId}`,
     { headers: getAuthHeader() }
   );
   return data;
@@ -55,7 +55,7 @@ export const analyzeProduct = async (productId:  string) => {
 
 export const batchGenerateAI = async (productIds: string[]) => {
   const { data } = await axios.post(
-    `${API_URL}/api/ai/batch-generate`,
+    `${API_URL}/ai/batch-generate`,
     { productIds },
     { headers: getAuthHeader() }
   );
@@ -64,7 +64,7 @@ export const batchGenerateAI = async (productIds: string[]) => {
 
 export const getAIProductsStatus = async () => {
   const { data } = await axios.get(
-    `${API_URL}/api/ai/products/status`,
+    `${API_URL}/ai/products/status`,
     { headers: getAuthHeader() }
   );
   return data;
@@ -72,7 +72,7 @@ export const getAIProductsStatus = async () => {
 
 export const generateCategoryBuyingGuide = async (categoryId: string) => {
   const { data } = await axios.post(
-    `${API_URL}/api/ai/category/${categoryId}/buying-guide`,
+    `${API_URL}/ai/category/${categoryId}/buying-guide`,
     {},
     { headers: getAuthHeader() }
   );
@@ -81,7 +81,7 @@ export const generateCategoryBuyingGuide = async (categoryId: string) => {
 
 export const generateProductComparison = async (productId1: string, productId2: string) => {
   const { data } = await axios.post(
-    `${API_URL}/api/ai/compare`,
+    `${API_URL}/ai/compare`,
     { productId1, productId2 },
     { headers: getAuthHeader() }
   );

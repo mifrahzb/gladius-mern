@@ -19,7 +19,7 @@ import {
 
 /**
  * @desc    Generate complete AI content for a product (CORE FEATURE #7)
- * @route   POST /api/ai/generate/: productId
+ * @route   POST /api/ai/generate/:productId
  * @access  Private/Admin
  */
 export const generateAIContent = asyncHandler(async (req, res) => {
@@ -31,9 +31,9 @@ export const generateAIContent = asyncHandler(async (req, res) => {
   }
 
   try {
-    const categoryName = product.category?. name || 'Knife';
+    const categoryName = product.category?.name || 'Knife';
     
-    console.log(`🤖 Generating AI content for:  ${product.name}`);
+    console.log(`🤖 Generating AI content for: ${product.name}`);
     
     // FEATURE 1: Generate product description
     const aiDescription = await generateProductDescription({
@@ -54,7 +54,7 @@ export const generateAIContent = asyncHandler(async (req, res) => {
     // Classify keyword intent
     const keywordIntent = aiKeywords.map(keyword => ({
       keyword,
-      intent:  classifySearchIntent(keyword)
+      intent: classifySearchIntent(keyword)
     }));
     
     // FEATURE 3: Generate meta description
@@ -92,7 +92,7 @@ export const generateAIContent = asyncHandler(async (req, res) => {
     const productSchemaData = generateProductSchema(product, categoryName);
     
     // FEATURE 4: Generate FAQ Schema
-    const faqData = await generateFAQSchema(product. name, categoryName);
+    const faqData = await generateFAQSchema(product.name, categoryName);
     
     // Update product with AI-generated content (pending approval)
     product.aiGeneratedDescription = aiDescription;
@@ -105,17 +105,17 @@ export const generateAIContent = asyncHandler(async (req, res) => {
     product.productSchema = productSchemaData;
     
     if (faqData) {
-      product.faqSchema = faqData. schema;
+      product.faqSchema = faqData.schema;
       product.faqs = faqData.faqs;
     }
     
     await product.save();
 
-    console.log(`✅ AI content generated for:  ${product.name}`);
+    console.log(`✅ AI content generated for: ${product.name}`);
 
     res.json({
       success: true,
-      message: 'AI content generated successfully.  Awaiting approval.',
+      message: 'AI content generated successfully. Awaiting approval.',
       data: {
         productId: product._id,
         productName: product.name,
@@ -124,7 +124,7 @@ export const generateAIContent = asyncHandler(async (req, res) => {
         aiSuggestedKeywords: aiKeywords,
         keywordIntent: keywordIntent,
         imageAlts: imageAlts,
-        faqs: faqData?. faqs || [],
+        faqs: faqData?.faqs || [],
         status: 'pending',
         generatedAt: product.aiGeneratedAt
       }
@@ -133,7 +133,7 @@ export const generateAIContent = asyncHandler(async (req, res) => {
   } catch (error) {
     console.error('❌ AI Generation Error:', error);
     res.status(500);
-    throw new Error(`Failed to generate AI content: ${error. message}`);
+    throw new Error(`Failed to generate AI content: ${error.message}`);
   }
 });
 
@@ -143,17 +143,23 @@ export const generateAIContent = asyncHandler(async (req, res) => {
  * @access  Private/Admin
  */
 export const approveAIContent = asyncHandler(async (req, res) => {
-  const product = await Product.findById(req. params.productId);
+  const product = await Product.findById(req.params.productId);
   
   if (!product) {
     res.status(404);
     throw new Error('Product not found');
   }
 
-  if (! product.aiGeneratedDescription) {
+  if (!product.aiGeneratedDescription) {
     res.status(400);
     throw new Error('No AI-generated content to approve');
   }
+
+  console.log('📋 BEFORE APPROVAL:');
+  console.log('  description:', product.description?.substring(0, 100));
+  console.log('  metaDescription:', product.metaDescription);
+  console.log('  metaKeywords:', product.metaKeywords);
+  console.log('  focusKeyword:', product.focusKeyword);
 
   // Apply AI-generated content to live fields
   product.description = product.aiGeneratedDescription;
@@ -161,7 +167,7 @@ export const approveAIContent = asyncHandler(async (req, res) => {
   product.metaKeywords = product.aiSuggestedKeywords;
   
   // Set focus keyword (first transactional keyword)
-  const transactionalKeyword = product.aiKeywordIntent?. find(
+  const transactionalKeyword = product.aiKeywordIntent?.find(
     ki => ki.intent === 'transactional'
   );
   if (transactionalKeyword) {
@@ -172,7 +178,12 @@ export const approveAIContent = asyncHandler(async (req, res) => {
 
   await product.save();
 
-  console.log(`✅ AI content approved for: ${product.name}`);
+  console.log('✅ AFTER APPROVAL:');
+  console.log('  description:', product.description?.substring(0, 100));
+  console.log('  metaDescription:', product.metaDescription);
+  console.log('  metaKeywords:', product.metaKeywords);
+  console.log('  focusKeyword:', product.focusKeyword);
+  console.log('  aiApprovalStatus:', product.aiApprovalStatus);
 
   res.json({
     success: true,
@@ -182,7 +193,7 @@ export const approveAIContent = asyncHandler(async (req, res) => {
       name: product.name,
       description: product.description,
       metaDescription: product.metaDescription,
-      metaKeywords: product. metaKeywords,
+      metaKeywords: product.metaKeywords,
       focusKeyword: product.focusKeyword,
       status: 'approved'
     }
@@ -209,7 +220,7 @@ export const rejectAIContent = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    message:  'AI content rejected',
+    message: 'AI content rejected',
     productId: product._id,
     productName: product.name
   });
@@ -236,7 +247,7 @@ export const analyzeProduct = asyncHandler(async (req, res) => {
       name: product.name,
       description: product.description,
       metaDescription: product.metaDescription,
-      metaKeywords:  product.metaKeywords,
+      metaKeywords: product.metaKeywords,
       imageAlts: product.imageAlts,
       focusKeyword: product.focusKeyword
     });
@@ -250,9 +261,9 @@ export const analyzeProduct = asyncHandler(async (req, res) => {
       seoScore,
       currentSEO: {
         hasMetaDescription: !!product.metaDescription,
-        metaDescriptionLength: product.metaDescription?. length || 0,
+        metaDescriptionLength: product.metaDescription?.length || 0,
         descriptionLength: product.description?.length || 0,
-        keywordsCount: product.metaKeywords?. length || 0,
+        keywordsCount: product.metaKeywords?.length || 0,
         hasImageAlts: product.imageAlts?.length > 0,
         imageAltsCount: product.imageAlts?.length || 0,
         hasFocusKeyword: !!product.focusKeyword,
@@ -308,14 +319,14 @@ export const batchGenerateAI = asyncHandler(async (req, res) => {
       // Generate all AI content
       const [aiDescription, aiKeywords, aiMetaDesc] = await Promise.all([
         generateProductDescription({
-          name:  product.name,
+          name: product.name,
           category: categoryName,
           brand: product.brand,
           price: product.price,
           specifications: product.specifications
         }),
         generateKeywords(product.name, categoryName, product.description),
-        generateMetaDescription(product.name, product. description, categoryName, product.price)
+        generateMetaDescription(product.name, product.description, categoryName, product.price)
       ]);
 
       const keywordIntent = aiKeywords.map(keyword => ({
@@ -328,7 +339,7 @@ export const batchGenerateAI = asyncHandler(async (req, res) => {
       product.aiSuggestedKeywords = aiKeywords;
       product.aiKeywordIntent = keywordIntent;
       product.aiApprovalStatus = 'pending';
-      product. aiGeneratedAt = new Date();
+      product.aiGeneratedAt = new Date();
 
       await product.save();
       
@@ -344,9 +355,9 @@ export const batchGenerateAI = asyncHandler(async (req, res) => {
       results.push({ 
         productId, 
         success: false, 
-        error:  error.message 
+        error: error.message 
       });
-      console.error(`❌ Failed for product ${productId}:`, error. message);
+      console.error(`❌ Failed for product ${productId}:`, error.message);
     }
   }
 
@@ -354,7 +365,7 @@ export const batchGenerateAI = asyncHandler(async (req, res) => {
 
   res.json({
     success: true,
-    message: `Processed ${productIds.length} products.  ${successCount} successful. `,
+    message: `Processed ${productIds.length} products. ${successCount} successful.`,
     results,
     summary: {
       total: productIds.length,
@@ -366,7 +377,7 @@ export const batchGenerateAI = asyncHandler(async (req, res) => {
 
 /**
  * @desc    Generate category buying guide (FEATURE 5)
- * @route   POST /api/ai/category/: categoryId/buying-guide
+ * @route   POST /api/ai/category/:categoryId/buying-guide
  * @access  Private/Admin
  */
 export const generateCategoryBuyingGuide = asyncHandler(async (req, res) => {
@@ -387,7 +398,7 @@ export const generateCategoryBuyingGuide = asyncHandler(async (req, res) => {
     const buyingGuide = await generateBuyingGuide(category.name, products);
     
     // Generate category description
-    const categoryDesc = await generateCategoryDescription(category.name, products. length);
+    const categoryDesc = await generateCategoryDescription(category.name, products.length);
     
     // Save to CategoryContent
     let categoryContent = await CategoryContent.findOne({ category: category._id });
@@ -400,7 +411,7 @@ export const generateCategoryBuyingGuide = asyncHandler(async (req, res) => {
         aiGenerated: true
       });
     } else {
-      categoryContent. description = categoryDesc;
+      categoryContent.description = categoryDesc;
       categoryContent.buyingGuide = buyingGuide;
       categoryContent.aiGenerated = true;
       categoryContent.lastUpdated = new Date();
@@ -440,7 +451,7 @@ export const generateProductComparison = asyncHandler(async (req, res) => {
 
   try {
     const [product1, product2] = await Promise.all([
-      Product. findById(productId1),
+      Product.findById(productId1),
       Product.findById(productId2)
     ]);
     
@@ -451,7 +462,7 @@ export const generateProductComparison = asyncHandler(async (req, res) => {
     
     const comparisonArticle = await generateComparisonArticle(product1, product2);
     
-    console.log(`✅ Generated comparison:  ${product1.name} vs ${product2.name}`);
+    console.log(`✅ Generated comparison: ${product1.name} vs ${product2.name}`);
 
     res.json({
       success: true,
@@ -480,7 +491,7 @@ export const getAIProductsStatus = asyncHandler(async (req, res) => {
       .sort({ aiGeneratedAt: -1 });
     
     const summary = {
-      total: products. length,
+      total: products.length,
       pending: products.filter(p => p.aiApprovalStatus === 'pending').length,
       approved: products.filter(p => p.aiApprovalStatus === 'approved').length,
       rejected: products.filter(p => p.aiApprovalStatus === 'rejected').length,
@@ -502,11 +513,10 @@ export const getAIProductsStatus = asyncHandler(async (req, res) => {
 
 /**
  * @desc    Regenerate AI content for a product
- * @route   PUT /api/ai/regenerate/: productId
+ * @route   PUT /api/ai/regenerate/:productId
  * @access  Private/Admin
  */
 export const regenerateAIContent = asyncHandler(async (req, res) => {
-  // Same as generateAIContent but overwrites existing
   const product = await Product.findById(req.params.productId).populate('category');
   
   if (!product) {
@@ -515,12 +525,12 @@ export const regenerateAIContent = asyncHandler(async (req, res) => {
   }
 
   try {
-    const categoryName = product.category?. name || 'Knife';
+    const categoryName = product.category?.name || 'Knife';
     
     console.log(`🔄 Regenerating AI content for: ${product.name}`);
     
     const aiDescription = await generateProductDescription({
-      name:  product.name,
+      name: product.name,
       category: categoryName,
       brand: product.brand,
       price: product.price,
@@ -568,6 +578,102 @@ export const regenerateAIContent = asyncHandler(async (req, res) => {
   }
 });
 
+/**
+ * @desc    Debug endpoint - Get full product with AI fields
+ * @route   GET /api/ai/debug/:productId
+ * @access  Private/Admin
+ */
+export const debugProductAI = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.productId)
+    .populate('category');
+  
+  if (!product) {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+
+  res.json({
+    success: true,
+    productId: product._id,
+    name: product.name,
+    aiStatus: product.aiApprovalStatus,
+    fields: {
+      // Live fields (what frontend sees)
+      live: {
+        description: product.description,
+        metaDescription: product.metaDescription,
+        metaKeywords: product.metaKeywords,
+        focusKeyword: product.focusKeyword,
+        imageAlts: product.imageAlts,
+        productSchema: product.productSchema,
+        faqSchema: product.faqSchema,
+        faqs: product.faqs
+      },
+      // AI-generated fields (pending)
+      ai: {
+        description: product.aiGeneratedDescription,
+        metaDescription: product.aiGeneratedMetaDescription,
+        keywords: product.aiSuggestedKeywords,
+        keywordIntent: product.aiKeywordIntent
+      }
+    }
+  });
+});
+
+/**
+ * @desc    Edit AI-generated content before approval
+ * @route   PUT /api/ai/edit/:productId
+ * @access  Private/Admin
+ */
+export const editAIContent = asyncHandler(async (req, res) => {
+  const product = await Product.findById(req.params.productId);
+  
+  if (!product) {
+    res.status(404);
+    throw new Error('Product not found');
+  }
+
+  if (product.aiApprovalStatus !== 'pending') {
+    res.status(400);
+    throw new Error('Can only edit pending AI content');
+  }
+
+  const { editedDescription, editedMetaDescription, keywords } = req.body;
+
+  if (editedDescription) {
+    product.aiGeneratedDescription = editedDescription;
+  }
+
+  if (editedMetaDescription) {
+    product.aiGeneratedMetaDescription = editedMetaDescription;
+  }
+
+  if (keywords) {
+    product.aiSuggestedKeywords = keywords;
+    // Reclassify keyword intent
+    product.aiKeywordIntent = keywords.map(keyword => ({
+      keyword,
+      intent: classifySearchIntent(keyword)
+    }));
+  }
+
+  await product.save();
+
+  res.json({
+    success: true,
+    message: 'AI content updated successfully',
+    product: {
+      _id: product._id,
+      name: product.name,
+      aiGeneratedDescription: product.aiGeneratedDescription,
+      aiGeneratedMetaDescription: product.aiGeneratedMetaDescription,
+      aiSuggestedKeywords: product.aiSuggestedKeywords,
+      aiKeywordIntent: product.aiKeywordIntent
+    }
+  });
+});
+
+
 export default {
   generateAIContent,
   approveAIContent,
@@ -577,5 +683,7 @@ export default {
   generateCategoryBuyingGuide,
   generateProductComparison,
   getAIProductsStatus,
-  regenerateAIContent
+  regenerateAIContent,
+  debugProductAI,
+  editAIContent
 };
