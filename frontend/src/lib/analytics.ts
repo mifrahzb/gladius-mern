@@ -1,6 +1,6 @@
 import axios from 'axios';
 
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
+const API_URL = import.meta. env.VITE_API_URL || 'http://localhost:5000';
 
 // Get or create session ID
 const getSessionId = (): string => {
@@ -35,8 +35,8 @@ export const trackEvent = async (
     const sessionId = getSessionId();
     const userId = localStorage.getItem('userId') || undefined;
     
-    // FIXED: Use /api/analytics/track (not /api/api/analytics/track)
-    await axios.post(`${API_URL}/api/analytics/track`, {
+    // FIXED: Single /api prefix
+    await axios.post(`${API_URL}/analytics/track`, {
       sessionId,
       type,
       productId: data?.productId,
@@ -58,7 +58,7 @@ export const trackEvent = async (
 export const endSession = async () => {
   try {
     const sessionId = getSessionId();
-    await axios.post(`${API_URL}/api/analytics/end-session`, { sessionId });
+    await axios.post(`${API_URL}/analytics/end-session`, { sessionId });
     sessionStorage.removeItem('analyticsSessionId');
   } catch (error) {
     console.error('End session error:', error);

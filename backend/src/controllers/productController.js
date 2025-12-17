@@ -97,7 +97,7 @@ export const getProductBySlug = asyncHandler(async (req, res) => {
   }
 });
 
-// @desc    Get product by category slug and product slug (SEO-friendly URL)
+// @desc    Get product by category slug and product slug (SEO-friendly URL) - ORIGINAL WORKING VERSION
 // @route   GET /api/products/:categorySlug/:productSlug
 // @access  Public
 export const getProductByCategoryAndSlug = asyncHandler(async (req, res) => {
@@ -110,24 +110,17 @@ export const getProductByCategoryAndSlug = asyncHandler(async (req, res) => {
     throw new Error('Category not found');
   }
   
+  // ORIGINAL WORKING QUERY - NO .lean(), NO .toObject(), NO WRAPPING
   const product = await Product.findOne({ 
     slug: productSlug,
     category: category._id
   }).populate('category', 'name slug metaTitle metaDescription');
 
   if (product) {
-    // Include structured data in response
-    const response = {
-      ...product.toObject(),
-      structuredData: {
-        productSchema: product.productSchema,
-        faqSchema: product.faqSchema
-      }
-    };
-    
-    res.json(response);
+    // ORIGINAL WORKING RESPONSE - just return the product
+    res.json(product);
   } else {
-    res. status(404);
+    res.status(404);
     throw new Error('Product not found');
   }
 });

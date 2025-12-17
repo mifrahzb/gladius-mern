@@ -38,7 +38,7 @@ const AnalyticsDashboard = () => {
     queryFn: async () => {
       const token = localStorage.getItem('token');
       const { data } = await axios.get(
-        `${API_URL}/api/analytics/dashboard? days=${timeRange}`,
+        `${API_URL}/analytics/dashboard?days=${timeRange}`,
         { headers: { Authorization: `Bearer ${token}` } }
       );
       return data;
@@ -49,7 +49,7 @@ const AnalyticsDashboard = () => {
     return (
       <div className="p-6">
         <div className="text-center">
-          <TrendingUp className="w-12 h-12 animate-pulse mx-auto mb-4 text-blue-600" />
+          <TrendingUp className="w-12 h-12 animate-pulse mx-auto mb-4 text-brown" />
           <p>Loading analytics... </p>
         </div>
       </div>
@@ -59,16 +59,23 @@ const AnalyticsDashboard = () => {
   const stats = analyticsData || {};
   const behavior = stats.behaviorAnalysis || {};
 
-  const COLORS = ['#3b82f6', '#8b5cf6', '#ec4899', '#f59e0b', '#10b981'];
+  // FIXED: Use theme colors instead of random bright colors
+  const COLORS = [
+    'hsl(30 40% 45%)',   // brown-accent
+    'hsl(200 15% 35%)',  // steel-blue
+    'hsl(25 35% 35%)',   // leather-brown
+    'hsl(210 6% 63%)',   // warm-gray
+    'hsl(200 15% 45%)'   // lighter steel
+  ];
 
   return (
-    <div className="p-6 space-y-6 bg-gradient-to-br from-slate-50 to-blue-50 min-h-screen">
-      {/* Header */}
+    <div className="p-6 space-y-6 bg-background min-h-screen">
+      {/* Header - FIXED:  Removed light background gradient */}
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-4xl font-bold mb-2 flex items-center gap-3">
-            <div className="bg-gradient-to-r from-green-600 to-blue-600 p-3 rounded-xl shadow-lg">
-              <TrendingUp className="w-8 h-8 text-white" />
+            <div className="gradient-brown p-3 rounded-xl shadow-steel">
+              <TrendingUp className="w-8 h-8 text-slate-dark" />
             </div>
             Analytics Dashboard
           </h1>
@@ -89,165 +96,152 @@ const AnalyticsDashboard = () => {
         </Select>
       </div>
 
-      {/* Key Metrics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
+      {/* Stats Cards - FIXED:  Consistent theme colors */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+        <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
               Total Sessions
             </CardTitle>
-            <Users className="w-4 h-4 text-blue-600" />
+            <Users className="w-4 h-4 text-brown" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">{stats.totalSessions || 0}</div>
+            <div className="text-2xl font-bold text-foreground">{stats.totalSessions || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              User visits in {timeRange} days
+              User visits tracked
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Avg Session Duration
+              Page Views
             </CardTitle>
-            <Clock className="w-4 h-4 text-green-600" />
+            <Eye className="w-4 h-4 text-steel" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {Math.round(behavior.avgSessionDuration || 0)}s
-            </div>
+            <div className="text-2xl font-bold text-foreground">{stats.totalPageViews || 0}</div>
             <p className="text-xs text-muted-foreground mt-1">
-              Time spent per visit
+              Total pages viewed
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Cart Abandonment
+              Avg. Session Duration
             </CardTitle>
-            <AlertTriangle className="w-4 h-4 text-orange-600" />
+            <Clock className="w-4 h-4 text-brown" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {stats.cartAbandonment?. rate || 0}%
+            <div className="text-2xl font-bold text-foreground">
+              {Math.round(stats.avgSessionDuration / 60 || 0)}m
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              {stats.cartAbandonment?.abandoned || 0} of {stats.cartAbandonment?.total || 0} carts
+              Average time on site
             </p>
           </CardContent>
         </Card>
 
-        <Card className="bg-white shadow-md hover:shadow-lg transition-shadow">
+        <Card className="border-border bg-card">
           <CardHeader className="flex flex-row items-center justify-between pb-2">
             <CardTitle className="text-sm font-medium text-muted-foreground">
-              Peak Hours
+              Bounce Rate
             </CardTitle>
-            <MousePointer className="w-4 h-4 text-purple-600" />
+            <AlertTriangle className="w-4 h-4 text-destructive" />
           </CardHeader>
           <CardContent>
-            <div className="text-3xl font-bold">
-              {behavior.peakHours?.[0] || 'N/A'}: 00
+            <div className="text-2xl font-bold text-foreground">
+              {Math.round(stats.bounceRate || 0)}%
             </div>
             <p className="text-xs text-muted-foreground mt-1">
-              Most active time
+              Single page visits
             </p>
           </CardContent>
         </Card>
       </div>
 
-      {/* Charts Row */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {/* Top Viewed Products */}
-        <Card className="bg-white shadow-md">
+      {/* Charts with theme colors */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Eye className="w-5 h-5 text-blue-600" />
-              Top Viewed Products
-            </CardTitle>
+            <CardTitle className="text-foreground">Most Viewed Products</CardTitle>
           </CardHeader>
           <CardContent>
-            {behavior.mostViewedProducts && behavior.mostViewedProducts.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <BarChart data={behavior.mostViewedProducts}>
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="name" />
-                  <YAxis />
-                  <Tooltip />
-                  <Bar dataKey="views" fill="#3b82f6" />
-                </BarChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                No data available
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={behavior.topProducts || []}>
+                <CartesianGrid strokeDasharray="3 3" stroke="hsl(210 11% 25%)" />
+                <XAxis dataKey="name" stroke="hsl(210 6% 63%)" />
+                <YAxis stroke="hsl(210 6% 63%)" />
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor:  'hsl(210 11% 17%)', 
+                    border: '1px solid hsl(210 11% 25%)',
+                    color: 'hsl(210 11% 93%)'
+                  }} 
+                />
+                <Bar dataKey="views" fill="hsl(30 40% 45%)" />
+              </BarChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
 
-        {/* Click Hotspots */}
-        <Card className="bg-white shadow-md">
+        <Card className="border-border bg-card">
           <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <MousePointer className="w-5 h-5 text-purple-600" />
-              Click Hotspots
-            </CardTitle>
+            <CardTitle className="text-foreground">Traffic Sources</CardTitle>
           </CardHeader>
           <CardContent>
-            {behavior.clickHotspots && behavior.clickHotspots.length > 0 ? (
-              <ResponsiveContainer width="100%" height={300}>
-                <PieChart>
-                  <Pie
-                    data={behavior.clickHotspots}
-                    dataKey="views"
-                    nameKey="name"
-                    cx="50%"
-                    cy="50%"
-                    outerRadius={100}
-                    label
-                  >
-                    {behavior.clickHotspots.map((entry:  any, index: number) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                  <Legend />
-                </PieChart>
-              </ResponsiveContainer>
-            ) : (
-              <div className="h-[300px] flex items-center justify-center text-muted-foreground">
-                No data available
-              </div>
-            )}
+            <ResponsiveContainer width="100%" height={300}>
+              <PieChart>
+                <Pie
+                  data={behavior.trafficSources || []}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={false}
+                  label={(entry) => entry.name}
+                  outerRadius={80}
+                  fill="hsl(30 40% 45%)"
+                  dataKey="value"
+                >
+                  {(behavior.trafficSources || []).map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS. length]} />
+                  ))}
+                </Pie>
+                <Tooltip 
+                  contentStyle={{ 
+                    backgroundColor:  'hsl(210 11% 17%)', 
+                    border: '1px solid hsl(210 11% 25%)',
+                    color: 'hsl(210 11% 93%)'
+                  }}
+                />
+                <Legend wrapperStyle={{ color: 'hsl(210 11% 93%)' }} />
+              </PieChart>
+            </ResponsiveContainer>
           </CardContent>
         </Card>
       </div>
 
-      {/* AI Recommendations */}
-      {behavior.recommendations && behavior.recommendations.length > 0 && (
-        <Card className="bg-gradient-to-br from-blue-50 to-purple-50 border-2 border-blue-300 shadow-md">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <TrendingUp className="w-5 h-5 text-blue-600" />
-              AI-Powered Recommendations
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <ul className="space-y-3">
-              {behavior.recommendations. map((rec: string, idx: number) => (
-                <li key={idx} className="flex items-start gap-3 bg-white p-3 rounded-lg">
-                  <span className="bg-blue-100 text-blue-700 rounded-full w-6 h-6 flex items-center justify-center text-sm font-semibold flex-shrink-0">
-                    {idx + 1}
-                  </span>
-                  <p className="text-sm leading-relaxed">{rec}</p>
-                </li>
-              ))}
-            </ul>
-          </CardContent>
-        </Card>
-      )}
+      {/* Behavior Insights */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="text-foreground flex items-center gap-2">
+            <MousePointer className="w-5 h-5 text-brown" />
+            User Behavior Insights
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            {behavior.recommendations?. map((rec, idx) => (
+              <div key={idx} className="flex items-start gap-3 p-3 bg-secondary rounded-lg">
+                <div className="w-2 h-2 rounded-full bg-brown mt-2"></div>
+                <p className="text-foreground text-sm">{rec}</p>
+              </div>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
     </div>
   );
 };

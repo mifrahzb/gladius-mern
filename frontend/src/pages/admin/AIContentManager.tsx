@@ -3,6 +3,9 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
+import { Textarea } from '@/components/ui/textarea'; // Added
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog'; // Added
+import { Label } from '@/components/ui/label'; // Added
 import { useToast } from '@/hooks/use-toast';
 import { 
   Sparkles, 
@@ -15,11 +18,16 @@ import {
   RefreshCw,
   Search,
   Filter,
-  AlertCircle
+  AlertCircle,
+  Edit2, // Added
+  Save, // Added
+  Eye, // Added
+  EyeOff // Added
 } from 'lucide-react';
 import { Progress } from '@/components/ui/progress';
 import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'; // Added
 import axios from 'axios';
 
 const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000';
@@ -81,7 +89,7 @@ const getAuthHeader = () => {
 
 const fetchProducts = async () => {
   try {
-    const { data } = await axios.get(`${API_URL}/api/products? limit=100`, {
+    const { data } = await axios.get(`${API_URL}/products?limit=100`, {
       headers: getAuthHeader()
     });
     return data. products || [];
@@ -93,7 +101,7 @@ const fetchProducts = async () => {
 
 const generateAIContent = async (productId: string) => {
   const { data } = await axios.post(
-    `${API_URL}/api/ai/generate/${productId}`,
+    `${API_URL}/ai/generate/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -102,7 +110,7 @@ const generateAIContent = async (productId: string) => {
 
 const approveAIContent = async (productId: string) => {
   const { data } = await axios. put(
-    `${API_URL}/api/ai/approve/${productId}`,
+    `${API_URL}/ai/approve/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -111,7 +119,7 @@ const approveAIContent = async (productId: string) => {
 
 const rejectAIContent = async (productId: string) => {
   const { data } = await axios.put(
-    `${API_URL}/api/ai/reject/${productId}`,
+    `${API_URL}/ai/reject/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -120,7 +128,7 @@ const rejectAIContent = async (productId: string) => {
 
 const regenerateAIContent = async (productId: string) => {
   const { data } = await axios. put(
-    `${API_URL}/api/ai/regenerate/${productId}`,
+    `${API_URL}/ai/regenerate/${productId}`,
     {},
     { headers: getAuthHeader() }
   );
@@ -129,7 +137,7 @@ const regenerateAIContent = async (productId: string) => {
 
 const analyzeProduct = async (productId: string) => {
   const { data } = await axios.get(
-    `${API_URL}/api/ai/analyze/${productId}`,
+    `${API_URL}/ai/analyze/${productId}`,
     { headers: getAuthHeader() }
   );
   return data;
@@ -137,8 +145,22 @@ const analyzeProduct = async (productId: string) => {
 
 const batchGenerateAI = async (productIds: string[]) => {
   const { data } = await axios.post(
-    `${API_URL}/api/ai/batch-generate`,
+    `${API_URL}/ai/batch-generate`,
     { productIds },
+    { headers: getAuthHeader() }
+  );
+  return data;
+};
+
+// NEW: Edit AI content function
+const editAIContent = async (productId: string, editedContent: {
+  description?: string;
+  metaDescription?: string;
+  keywords?: string[];
+}) => {
+  const { data } = await axios.put(
+    `${API_URL}/ai/edit/${productId}`,
+    editedContent,
     { headers: getAuthHeader() }
   );
   return data;
@@ -152,6 +174,13 @@ const AIContentManager = () => {
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterStatus, setFilterStatus] = useState<string>('all');
+  
+  // NEW: State for editing
+  const [editingProduct, setEditingProduct] = useState<Product | null>(null);
+  const [editedDescription, setEditedDescription] = useState('');
+  const [editedMetaDescription, setEditedMetaDescription] = useState('');
+  const [editedKeywords, setEditedKeywords] = useState<string[]>([]);
+  const [previewMode, setPreviewMode] = useState<'original' | 'ai' | 'edited'>('ai');
 
   // Fetch products
   const { data: products = [], isLoading, error, refetch } = useQuery({
@@ -262,12 +291,56 @@ const AIContentManager = () => {
     }
   });
 
+  // NEW: Edit mutation
+  const editMutation = useMutation({
+    mutationFn: ({ productId, content }: { productId: string; content: any }) => 
+      editAIContent(productId, content),
+    onSuccess: (data) => {
+      toast({
+        title: '✏️ Content Saved',
+        description: 'Your edits have been saved successfully',
+      });
+      setEditingProduct(null);
+      refetch();
+    },
+    onError: (error: any) => {
+      toast({
+        title: 'Save Failed',
+        description: error.response?.data?.message || 'Failed to save changes',
+        variant: 'destructive'
+      });
+    }
+  });
+
   const toggleSelectAll = () => {
     if (selectedProducts.length === filteredProducts.length) {
       setSelectedProducts([]);
     } else {
       setSelectedProducts(filteredProducts.map((p:  Product) => p._id));
     }
+  };
+
+  // NEW: Open edit dialog
+  const openEditDialog = (product: Product) => {
+    setEditingProduct(product);
+    setEditedDescription(product.aiGeneratedDescription || '');
+    setEditedMetaDescription(product.aiGeneratedMetaDescription || '');
+    setEditedKeywords(product.aiSuggestedKeywords || []);
+    setPreviewMode('ai');
+  };
+
+  // NEW: Save edited content
+  const handleSaveEdit = () => {
+    if (!editingProduct) return;
+    
+    editMutation.mutate({
+      productId: editingProduct._id,
+      content: {
+        description: editedDescription,
+        metaDescription: editedMetaDescription,
+        keywords: editedKeywords
+      }
+    });
   };
 
   if (isLoading) {
@@ -466,15 +539,189 @@ const AIContentManager = () => {
               analyzeMutation={analyzeMutation}
               setSelectedProduct={setSelectedProduct}
               analysis={selectedProduct === product._id ? analysis : null}
+              onEdit={openEditDialog} // Added
             />
           ))
         )}
       </div>
+
+      {/* EDIT MODAL - ADDED */}
+      {editingProduct && (
+        <Dialog open={!!editingProduct} onOpenChange={() => setEditingProduct(null)}>
+          <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-[#1a1f1d] border-[#2a2f2d] text-white">
+            <DialogHeader>
+              <DialogTitle className="text-xl">
+                ✏️ Edit AI Content: {editingProduct.name}
+              </DialogTitle>
+              <div className="flex gap-2 mt-2">
+                <Badge className="bg-[#8B7355]">
+                  {editingProduct.aiApprovalStatus === 'pending' ? '⏳ Pending' : 
+                   editingProduct.aiApprovalStatus === 'approved' ? '✓ Approved' : '✗ Rejected'}
+                </Badge>
+                <Badge variant="outline" className="border-[#8B7355] text-[#8B7355]">
+                  ${editingProduct.price}
+                </Badge>
+              </div>
+            </DialogHeader>
+
+            <Tabs defaultValue="description" className="mt-4">
+              <TabsList className="bg-[#0a0f0d] border border-[#2a2f2d]">
+                <TabsTrigger value="description">Description</TabsTrigger>
+                <TabsTrigger value="meta">Meta Description</TabsTrigger>
+                <TabsTrigger value="keywords">Keywords</TabsTrigger>
+                <TabsTrigger value="preview">Preview</TabsTrigger>
+              </TabsList>
+
+              {/* Description Tab */}
+              <TabsContent value="description" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="description" className="text-white">
+                    Product Description
+                  </Label>
+                  <Textarea
+                    id="description"
+                    value={editedDescription}
+                    onChange={(e) => setEditedDescription(e.target.value)}
+                    rows={12}
+                    className="bg-[#0a0f0d] border-[#2a2f2d] text-white resize-none"
+                  />
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>{editedDescription.length} characters</span>
+                    <span className={editedDescription.length < 300 ? 'text-orange-500' : 
+                                     editedDescription.length > 2000 ? 'text-orange-500' : 'text-green-500'}>
+                      {editedDescription.length < 300 ? '⚠️ Too short' : 
+                       editedDescription.length > 2000 ? '⚠️ Too long' : '✅ Good length'}
+                    </span>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Meta Description Tab */}
+              <TabsContent value="meta" className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="metaDescription" className="text-white">
+                    Meta Description (for search engines)
+                  </Label>
+                  <Textarea
+                    id="metaDescription"
+                    value={editedMetaDescription}
+                    onChange={(e) => setEditedMetaDescription(e.target.value)}
+                    rows={4}
+                    className="bg-[#0a0f0d] border-[#2a2f2d] text-white resize-none"
+                    placeholder="Brief description for search results (50-160 characters)"
+                  />
+                  <div className="flex justify-between text-sm text-gray-400">
+                    <span>{editedMetaDescription.length} characters</span>
+                    <span className={editedMetaDescription.length < 50 ? 'text-orange-500' : 
+                                     editedMetaDescription.length > 160 ? 'text-orange-500' : 'text-green-500'}>
+                      {editedMetaDescription.length < 50 ? '⚠️ Too short' : 
+                       editedMetaDescription.length > 160 ? '⚠️ Too long' : '✅ Perfect'}
+                    </span>
+                  </div>
+                </div>
+              </TabsContent>
+
+              {/* Keywords Tab */}
+              <TabsContent value="keywords" className="space-y-4">
+                <div className="space-y-2">
+                  <Label className="text-white">Keywords</Label>
+                  <div className="flex flex-wrap gap-2 mb-4">
+                    {editedKeywords.map((keyword, index) => (
+                      <Badge key={index} className="bg-[#8B7355] text-white">
+                        {keyword}
+                      </Badge>
+                    ))}
+                  </div>
+                  <Input
+                    placeholder="Add new keyword (press Enter)"
+                    className="bg-[#0a0f0d] border-[#2a2f2d] text-white"
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' && e.currentTarget.value.trim()) {
+                        setEditedKeywords([...editedKeywords, e.currentTarget.value.trim()]);
+                        e.currentTarget.value = '';
+                      }
+                    }}
+                  />
+                  <p className="text-sm text-gray-400">
+                    Press Enter to add keywords. Click on a keyword to remove it.
+                  </p>
+                </div>
+              </TabsContent>
+
+              {/* Preview Tab */}
+              <TabsContent value="preview" className="space-y-4">
+                <div className="flex gap-2 mb-4">
+                  <Button
+                    variant={previewMode === 'original' ? 'default' : 'outline'}
+                    onClick={() => setPreviewMode('original')}
+                    className={previewMode === 'original' ? 'bg-[#8B7355]' : 'border-[#2a2f2d]'}
+                  >
+                    <EyeOff className="w-4 h-4 mr-2" />
+                    Original
+                  </Button>
+                  <Button
+                    variant={previewMode === 'ai' ? 'default' : 'outline'}
+                    onClick={() => setPreviewMode('ai')}
+                    className={previewMode === 'ai' ? 'bg-[#8B7355]' : 'border-[#2a2f2d]'}
+                  >
+                    <Sparkles className="w-4 h-4 mr-2" />
+                    AI Generated
+                  </Button>
+                  <Button
+                    variant={previewMode === 'edited' ? 'default' : 'outline'}
+                    onClick={() => setPreviewMode('edited')}
+                    className={previewMode === 'edited' ? 'bg-[#8B7355]' : 'border-[#2a2f2d]'}
+                  >
+                    <Eye className="w-4 h-4 mr-2" />
+                    Edited
+                  </Button>
+                </div>
+
+                <div className="bg-[#0a0f0d] p-4 rounded-lg border border-[#2a2f2d]">
+                  <h3 className="font-bold mb-2 text-white">Preview:</h3>
+                  <p className="text-gray-300 whitespace-pre-line">
+                    {previewMode === 'original' ? editingProduct.description :
+                     previewMode === 'ai' ? editingProduct.aiGeneratedDescription :
+                     editedDescription}
+                  </p>
+                </div>
+
+                <div className="bg-[#0a0f0d] p-4 rounded-lg border border-[#2a2f2d]">
+                  <h3 className="font-bold mb-2 text-white">Meta Description Preview:</h3>
+                  <p className="text-gray-400 italic">
+                    {previewMode === 'original' ? editingProduct.metaDescription :
+                     previewMode === 'ai' ? editingProduct.aiGeneratedMetaDescription :
+                     editedMetaDescription}
+                  </p>
+                </div>
+              </TabsContent>
+            </Tabs>
+
+            <div className="flex justify-end gap-2 pt-4 border-t border-[#2a2f2d]">
+              <Button
+                variant="outline"
+                onClick={() => setEditingProduct(null)}
+                className="border-[#2a2f2d] text-gray-400 hover:bg-gray-800"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleSaveEdit}
+                disabled={editMutation.isPending}
+                className="bg-gradient-to-r from-[#8B7355] to-[#6d5a43] text-white hover:from-[#6d5a43] hover:to-[#5a4a36]"
+              >
+                <Save className="w-4 h-4 mr-2" />
+                {editMutation.isPending ? 'Saving...' : 'Save Changes'}
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
     </div>
   );
 };
 
-// Product Card Component (keeping your existing logic but with dark theme)
+// UPDATED Product Card Component with Edit Button
 interface ProductCardProps {
   product:  Product;
   selectedProducts: string[];
@@ -486,6 +733,7 @@ interface ProductCardProps {
   analyzeMutation:  any;
   setSelectedProduct:  (id: string) => void;
   analysis: SEOAnalysis | null;
+  onEdit: (product: Product) => void; // Added
 }
 
 const ProductCard = ({
@@ -498,7 +746,8 @@ const ProductCard = ({
   rejectMutation,
   analyzeMutation,
   setSelectedProduct,
-  analysis
+  analysis,
+  onEdit // Added
 }: ProductCardProps) => {
   const isSelected = selectedProducts.includes(product._id);
 
@@ -563,6 +812,22 @@ const ProductCard = ({
           </p>
         </div>
 
+        {/* AI Generated Content Preview (if exists) */}
+        {product.aiGeneratedDescription && (
+          <div className="bg-[#0a0f0d] p-4 rounded-lg border border-green-900/30">
+            <div className="flex items-center gap-2 mb-2">
+              <Sparkles className="w-4 h-4 text-green-500" />
+              <h4 className="font-semibold text-sm text-white">AI Generated Description</h4>
+              <span className="text-xs text-gray-500">
+                ({product.aiGeneratedDescription.length} chars)
+              </span>
+            </div>
+            <p className="text-sm text-gray-400 line-clamp-2">
+              {product.aiGeneratedDescription}
+            </p>
+          </div>
+        )}
+
         {/* Action Buttons */}
         <div className="flex gap-2 flex-wrap pt-2 border-t border-[#2a2f2d]">
           {! product.aiGeneratedDescription ?  (
@@ -576,6 +841,18 @@ const ProductCard = ({
             </Button>
           ) : (
             <>
+              {/* EDIT BUTTON - ADDED */}
+              {product.aiApprovalStatus === 'pending' && (
+                <Button
+                  onClick={() => onEdit(product)}
+                  variant="outline"
+                  className="border-blue-600 text-blue-500 hover:bg-blue-900 hover:text-blue-300"
+                >
+                  <Edit2 className="w-4 h-4 mr-2" />
+                  Edit Content
+                </Button>
+              )}
+              
               <Button
                 onClick={() => regenerateMutation.mutate(product._id)}
                 disabled={regenerateMutation.isPending}
